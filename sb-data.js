@@ -9,6 +9,48 @@ const WORLD_HEIGHT = 180;
 window.WORLD_WIDTH = WORLD_WIDTH;
 window.WORLD_HEIGHT = WORLD_HEIGHT;
 
+// --- MATERIAL DEFINITIONS (must be defined before ChunkEngine.init) ---
+const M = {
+    AIR: 0, STONE: 1, SAND: 2, WATER: 3, WOOD: 4, LEAVES: 5, FIRE: 6,
+    STEAM: 8, FIREWORK: 9, VINE: 10, LAVA: 11, SPARK: 12, COAL: 13,
+    EMBER: 14, ACID: 15, METHANE: 16, ICE: 17, TERMITE: 18, CONCRETE: 19,
+    LIGHTNING: 20, TNT: 21, URANIUM: 22, BEDROCK: 23,
+    BATTERY: 24, WIRE: 25, BOOSTER: 26, LAMP: 27,
+    REDSTONE_TORCH: 28, DETONATOR: 29, SENSOR: 30
+};
+const firePalette = [[0, 0, 0, 0], [160, 0, 0], [230, 90, 0], [255, 200, 0], [255, 255, 200]];
+
+const colors = {};
+colors[M.AIR] = [15, 23, 42];
+colors[M.STONE] = [100, 100, 100];
+colors[M.SAND] = [220, 200, 150];
+colors[M.WATER] = [40, 100, 220];
+colors[M.WOOD] = [101, 67, 33];
+colors[M.LEAVES] = [50, 140, 50];
+colors[M.STEAM] = [200, 220, 230];
+colors[M.LAVA] = [255, 80, 0];
+colors[M.VINE] = [30, 100, 30];
+colors[M.FIREWORK] = [255, 255, 255];
+colors[M.SPARK] = [255, 200, 100];
+colors[M.COAL] = [40, 40, 40];
+colors[M.EMBER] = [180, 60, 40];
+colors[M.ACID] = [170, 255, 0];
+colors[M.METHANE] = [20, 40, 30];
+colors[M.ICE] = [180, 220, 255];
+colors[M.TERMITE] = [200, 150, 100];
+colors[M.CONCRETE] = [50, 50, 60];
+colors[M.LIGHTNING] = [255, 255, 255];
+colors[M.TNT] = [180, 40, 40];
+colors[M.URANIUM] = [50, 255, 50];
+colors[M.BEDROCK] = [30, 30, 30];
+colors[M.BATTERY] = [30, 80, 50];
+colors[M.WIRE] = [184, 115, 51];
+colors[M.BOOSTER] = [70, 80, 90];
+colors[M.LAMP] = [50, 50, 50];
+colors[M.REDSTONE_TORCH] = [255, 180, 40];
+colors[M.DETONATOR] = [180, 60, 60];
+colors[M.SENSOR] = [60, 80, 180];
+
 const dpr = Math.min(window.devicePixelRatio || 1, 2);
 const isTablet = window.innerWidth >= 768 && window.innerWidth <= 1366;
 const targetShort = isTablet ? 220 : 180;
@@ -45,48 +87,6 @@ function initSimulationSize() {
     data = imgData.data;
 }
 initSimulationSize();
-
-// Material definitions
-const M = {
-    AIR: 0, STONE: 1, SAND: 2, WATER: 3, WOOD: 4, LEAVES: 5, FIRE: 6,
-    STEAM: 8, FIREWORK: 9, VINE: 10, LAVA: 11, SPARK: 12, COAL: 13,
-    EMBER: 14, ACID: 15, METHANE: 16, ICE: 17, TERMITE: 18, CONCRETE: 19,
-    LIGHTNING: 20, TNT: 21, URANIUM: 22, BEDROCK: 23,
-    BATTERY: 24, WIRE: 25, BOOSTER: 26, LAMP: 27,
-    REDSTONE_TORCH: 28, DETONATOR: 29, SENSOR: 30
-};
-const firePalette = [[0, 0, 0, 0], [160, 0, 0], [230, 90, 0], [255, 200, 0], [255, 255, 200]];
-
-const colors = {};
-colors[M.AIR] = [15, 23, 42];
-colors[M.STONE] = [100, 100, 100];
-colors[M.SAND] = [220, 200, 150];
-colors[M.WATER] = [40, 100, 220];
-colors[M.WOOD] = [101, 67, 33];
-colors[M.LEAVES] = [50, 140, 50];
-colors[M.STEAM] = [200, 220, 230];
-colors[M.LAVA] = [255, 80, 0];
-colors[M.VINE] = [30, 100, 30];
-colors[M.FIREWORK] = [255, 255, 255];
-colors[M.SPARK] = [255, 200, 100];
-colors[M.COAL] = [40, 40, 40];
-colors[M.EMBER] = [180, 60, 40];
-colors[M.ACID] = [170, 255, 0];
-colors[M.METHANE] = [20, 40, 30];
-colors[M.ICE] = [180, 220, 255];
-colors[M.TERMITE] = [200, 150, 100];
-colors[M.CONCRETE] = [50, 50, 60];
-colors[M.LIGHTNING] = [255, 255, 255];
-colors[M.TNT] = [180, 40, 40];
-colors[M.URANIUM] = [50, 255, 50];
-colors[M.BEDROCK] = [30, 30, 30];
-colors[M.BATTERY] = [30, 80, 50];   // Deep Emerald
-colors[M.WIRE] = [184, 115, 51];   // Copper
-colors[M.BOOSTER] = [70, 80, 90];  // Industrial Slate
-colors[M.LAMP] = [50, 50, 50];     // Dark Gray (Off)
-colors[M.REDSTONE_TORCH] = [255, 80, 50];   // Bright red
-colors[M.DETONATOR] = [180, 60, 60];        // Rust red
-colors[M.SENSOR] = [60, 80, 180];           // Blue-gray
 
 // --- STATE ---
 let currentMaterial = M.STONE;
@@ -132,8 +132,8 @@ const extraToolsSource = [
     { id: M.WIRE, name: 'DRAHT', col: 'bg-orange-600', border: 'border-orange-800', desc: 'Leitet Strom' },
     { id: M.BOOSTER, name: 'VERSTÄRKER', col: 'bg-slate-500', border: 'border-slate-700', desc: 'Frischt das Signal auf' },
     { id: M.LAMP, name: 'LAMPE', col: 'bg-yellow-700', border: 'border-yellow-900', desc: 'Leuchtet bei Strom' },
-    { id: M.REDSTONE_TORCH, name: 'FACKEL', col: 'bg-red-600', border: 'border-red-800', desc: 'Invertiert Strom' },
-    { id: M.DETONATOR, name: 'ZÜNDER', col: 'bg-red-800', border: 'border-red-950', desc: 'Zündet bei Strom' },
+    { id: M.REDSTONE_TORCH, name: 'STROM-FACKEL', col: 'bg-yellow-500', border: 'border-yellow-700', desc: 'Dauer-Stromquelle' },
+    { id: M.DETONATOR, name: 'ZÜNDER', col: 'bg-red-800', border: 'border-red-950', desc: 'Brennt durch bei Hitze/Strom' },
     { id: M.SENSOR, name: 'SENSOR', col: 'bg-blue-700', border: 'border-blue-900', desc: 'Erkennt Veränderung' },
 ];
 

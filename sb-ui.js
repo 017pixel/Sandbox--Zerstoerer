@@ -158,7 +158,7 @@ function selectExtraTool(id) {
         renderTools();
     } else {
         // Add
-        if (activeExtraTools.length >= 4) { // Limit 4
+        if (activeExtraTools.length >= 7) {
             // Remove first one (FIFO)
             activeExtraTools.shift();
         }

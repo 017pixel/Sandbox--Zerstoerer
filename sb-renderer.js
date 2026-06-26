@@ -90,25 +90,22 @@ function draw() {
                 r = Math.min(255, r + 10 + pulse * 0.5);
             }
             else if (cell === M.REDSTONE_TORCH) {
-                const wire = ChunkEngine.getWire(worldX, worldY);
-                if (wire > 0) {
-                    const pulse = Math.sin(time * 10 + worldX * 0.4) * 25 + 25;
-                    r = 255;
-                    g = 60 + pulse;
-                    b = 30 + pulse * 0.3;
-                } else {
-                    r = 80; g = 20; b = 10;
-                }
+                // Strom-Fackel: flame-like torch visual
+                const flicker = Math.sin(time * 14 + worldX * 0.7 + worldY * 0.3) * 30;
+                const pulse = Math.sin(time * 6) * 15;
+                r = 255;
+                g = 170 + flicker + pulse;
+                b = 30 + flicker * 0.4;
+                r = Math.min(255, r);
+                g = Math.min(255, Math.max(80, g));
+                b = Math.min(255, Math.max(5, b));
             }
             else if (cell === M.DETONATOR) {
-                const wire = ChunkEngine.getWire(worldX, worldY);
-                const adjPowered = (worldX > 0 && ChunkEngine.getV(worldX - 1, worldY) === M.WIRE && ChunkEngine.getWire(worldX - 1, worldY) > 50) ||
-                    (worldX < W - 1 && ChunkEngine.getV(worldX + 1, worldY) === M.WIRE && ChunkEngine.getWire(worldX + 1, worldY) > 50) ||
-                    (worldY > 0 && ChunkEngine.getV(worldX, worldY - 1) === M.WIRE && ChunkEngine.getWire(worldX, worldY - 1) > 50) ||
-                    (worldY < H - 1 && ChunkEngine.getV(worldX, worldY + 1) === M.WIRE && ChunkEngine.getWire(worldX, worldY + 1) > 50);
-                if (adjPowered || wire > 50) {
-                    const blink = Math.sin(time * 16) > 0 ? 255 : 120;
-                    r = blink; g = 50; b = 50;
+                // Zünder: dull red, glows when near fire or powered
+                const heat = ChunkEngine.getHeat(worldX, worldY);
+                if (heat > 30) {
+                    const glow = Math.sin(time * 12) * 20 + 20;
+                    r = 220 + glow; g = 70; b = 50;
                 } else {
                     r = 180; g = 60; b = 60;
                 }

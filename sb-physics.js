@@ -67,20 +67,15 @@ function updatePhysics() {
                         wMap[idx] = Math.max(0, maxE - 2);
                     }
                 } else if (cell === M.REDSTONE_TORCH) {
-                    let inputPower = 0;
-                    if (y < H - 1) inputPower = Math.max(inputPower, wMap[idx + W]);
-                    if (x > 0) inputPower = Math.max(inputPower, wMap[idx - 1]);
-                    if (x < W - 1) inputPower = Math.max(inputPower, wMap[idx + 1]);
-                    if (y > 0) inputPower = Math.max(inputPower, wMap[idx - W]);
-
-                    if (inputPower > 128) {
-                        wMap[idx] = 0;
-                    } else {
-                        wMap[idx] = 255;
-                    }
+                    // Strom-Fackel: always outputs 255 (power source)
+                    wMap[idx] = 255;
                 } else if (cell === M.SENSOR) {
-                    if (wMap[idx] > 0) {
-                        wMap[idx] = Math.max(0, wMap[idx] - 1);
+                    // Use liquidDir as timer, output full signal while active
+                    const lq = ChunkEngine.liquidDir;
+                    if (lq[idx] > 0) {
+                        lq[idx]--;
+                        wMap[idx] = 255;
+                        if (lq[idx] === 0) wMap[idx] = 0;
                     }
                     let changed = false;
                     if (x > 0 && g[idx - 1] !== ChunkEngine.prevGrid[idx - 1]) changed = true;
@@ -88,7 +83,8 @@ function updatePhysics() {
                     else if (y > 0 && g[idx - W] !== ChunkEngine.prevGrid[idx - W]) changed = true;
                     else if (y < H - 1 && g[idx + W] !== ChunkEngine.prevGrid[idx + W]) changed = true;
                     if (changed) {
-                        wMap[idx] = 30;
+                        lq[idx] = 30;
+                        wMap[idx] = 255;
                     }
                 } else {
                     if (wMap[idx] > 0) wMap[idx] = 0;
@@ -120,7 +116,11 @@ function updatePhysics() {
                     decay = decay / fireIntensity;
                     const srcHeat = ChunkEngine.getHeat(srcX, srcY);
                     let newHeat = srcHeat - decay;
-                    hMap[idx] = Math.max(0, newHeat);
+                    if (cell === M.DETONATOR) {
+                        hMap[idx] = Math.max(hMap[idx], Math.max(0, newHeat));
+                    } else {
+                        hMap[idx] = Math.max(0, newHeat);
+                    }
                 } else {
                     hMap[idx] = 0;
                 }
@@ -268,6 +268,7 @@ function updatePhysics() {
     }
 
     // 3. PASS 2 (DOWNWARD — solids, liquids, TNT, detonator, etc.)
+    const detonatorBurns = [];
     for (let y = H - 1; y >= 0; y--) {
         const dir = random() > 0.5 ? 1 : -1;
         for (let i = 0; i < W; i++) {
@@ -441,11 +442,18 @@ function updatePhysics() {
                 }
             }
             else if (type === M.DETONATOR) {
-                const below = ChunkEngine.getV(x, y + 1);
-                if (y < H - 1 && below === M.AIR) {
-                    ChunkEngine.setV(x, y + 1, M.DETONATOR);
-                    g[idx] = M.AIR;
-                    continue;
+                // No gravity. Burns up on contact with fire, lava, spark, ember, or powered wire.
+                // Uses liquidDir as burn delay counter (3 ticks = ~65% slower chain).
+                let burning = (hMap[idx] > 50);
+                if (!burning) {
+                    const neighbors = [[x - 1, y], [x + 1, y], [x, y - 1], [x, y + 1]];
+                    for (const [nx, ny] of neighbors) {
+                        const nt = ChunkEngine.getV(nx, ny);
+                        if ([M.FIRE, M.LAVA, M.SPARK, M.EMBER, M.LIGHTNING].includes(nt)) {
+                            burning = true;
+                            break;
+                        }
+                    }
                 }
                 let powered = false;
                 if ((x > 0 && ChunkEngine.getV(x - 1, y) === M.WIRE && ChunkEngine.getWire(x - 1, y) > 50) ||
@@ -454,35 +462,27 @@ function updatePhysics() {
                     (y < H - 1 && ChunkEngine.getV(x, y + 1) === M.WIRE && ChunkEngine.getWire(x, y + 1) > 50)) {
                     powered = true;
                 }
-                // Also check for direct Redstone Torch output
                 if (!powered) {
-                    if ((x > 0 && g[idx - 1] === M.REDSTONE_TORCH && wMap[idx - 1] > 128) ||
-                        (x < W - 1 && g[idx + 1] === M.REDSTONE_TORCH && wMap[idx + 1] > 128) ||
-                        (y > 0 && g[idx - W] === M.REDSTONE_TORCH && wMap[idx - W] > 128) ||
-                        (y < H - 1 && g[idx + W] === M.REDSTONE_TORCH && wMap[idx + W] > 128)) {
+                    if ((x > 0 && g[idx - 1] === M.REDSTONE_TORCH && wMap[idx - 1] > 0) ||
+                        (x < W - 1 && g[idx + 1] === M.REDSTONE_TORCH && wMap[idx + 1] > 0) ||
+                        (y > 0 && g[idx - W] === M.REDSTONE_TORCH && wMap[idx - W] > 0) ||
+                        (y < H - 1 && g[idx + W] === M.REDSTONE_TORCH && wMap[idx + W] > 0)) {
                         powered = true;
                     }
                 }
-                if (powered) {
-                    const r = 8, rSq = r * r;
-                    for (let dy = -r; dy <= r; dy++) {
-                        for (let dx = -r; dx <= r; dx++) {
-                            const d = dx * dx + dy * dy;
-                            const tx = x + dx, ty = y + dy;
-                            if (ty >= 0 && ty < H && tx >= 0 && tx < W) {
-                                const tt = ChunkEngine.getV(tx, ty);
-                                if (tt === M.BEDROCK) continue;
-                                if (d <= rSq) {
-                                    ChunkEngine.setV(tx, ty, M.AIR);
-                                    ChunkEngine.setHeat(tx, ty, 255);
-                                }
-                            }
-                        }
+                if (powered || burning) {
+                    const lq = ChunkEngine.liquidDir;
+                    lq[idx]++;
+                    if (lq[idx] >= 3) {
+                        g[idx] = M.AIR;
+                        wMap[idx] = 0;
+                        lq[idx] = 0;
+                        detonatorBurns.push([x, y]);
+                        AudioEngine.play('fire', 0.2);
+                        continue;
                     }
-                    g[idx] = M.AIR;
-                    wMap[idx] = 0;
-                    AudioEngine.play('tnt');
-                    continue;
+                } else {
+                    ChunkEngine.liquidDir[idx] = 0;
                 }
             }
             else if (type === M.URANIUM) {
@@ -676,6 +676,14 @@ function updatePhysics() {
                 }
             }
         }
+    }
+
+    // Post-process detonator burns: spread heat to adjacent cells for chain reaction
+    for (const [bx, by] of detonatorBurns) {
+        if (bx > 0) ChunkEngine.setHeat(bx - 1, by, 255);
+        if (bx < W - 1) ChunkEngine.setHeat(bx + 1, by, 255);
+        if (by > 0) ChunkEngine.setHeat(bx, by - 1, 255);
+        if (by < H - 1) ChunkEngine.setHeat(bx, by + 1, 255);
     }
 
     // Finalize meltdown

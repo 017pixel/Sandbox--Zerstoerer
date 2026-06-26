@@ -12,6 +12,13 @@ function paint(e) {
     // Single placement for Firework
     if (currentMaterial === M.FIREWORK && (e.type === 'mousemove' || e.type === 'touchmove')) return;
 
+    // Strom-Fackel: 0.3s placement delay
+    if (currentMaterial === M.REDSTONE_TORCH) {
+        const now = Date.now();
+        if (now - lastTorchPlaceTime < 300) return;
+        lastTorchPlaceTime = now;
+    }
+
     const { x, y } = getPos(e);
     let size = (currentMaterial === M.AIR) ? eraserSize : brushSize;
     // --- BRUSH RULES ---
@@ -21,6 +28,8 @@ function paint(e) {
         if (size <= 2) size = 1;
         else if (size <= 5) size = 2;
         else size = 4;
+    } else if (currentMaterial === M.REDSTONE_TORCH) {
+        size = 1;
     }
 
     let r = (size <= 1) ? 0 : Math.floor(size / 2);
@@ -72,6 +81,7 @@ let lastMidY = 0;
 let isPanning = false;
 let lastPanX = 0;
 let lastPanY = 0;
+let lastTorchPlaceTime = 0;
 
 // Disable context menu on canvas for right-click pan
 canvas.addEventListener('contextmenu', e => e.preventDefault());
