@@ -50,7 +50,7 @@ class SandboxStorage {
             const world = {
                 id,
                 name,
-                data: gridData, // Store as is (can be Array of chunks now)
+                data: gridData,
                 timestamp: Date.now()
             };
             const request = store.put(world);

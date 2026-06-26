@@ -1,4 +1,4 @@
-const CACHE_NAME = 'sandbox-v3';
+const CACHE_NAME = 'sandbox-v4';
 const ASSETS = [
     './',
     './index.html',

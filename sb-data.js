@@ -4,11 +4,16 @@ const fpsDisplay = document.getElementById('fps');
 const entDisplay = document.getElementById('entityCount');
 
 // --- CONFIG ---
+const WORLD_WIDTH = 320;
+const WORLD_HEIGHT = 180;
+window.WORLD_WIDTH = WORLD_WIDTH;
+window.WORLD_HEIGHT = WORLD_HEIGHT;
+
 const dpr = Math.min(window.devicePixelRatio || 1, 2);
 const isTablet = window.innerWidth >= 768 && window.innerWidth <= 1366;
 const targetShort = isTablet ? 220 : 180;
 
-// Internal Simulation Size (Global) - height is fixed, width matches viewport
+// Internal Simulation Size (Global) - viewport dimensions
 let width, height;
 
 // Offscreen buffer for simulation pixels
@@ -16,7 +21,7 @@ const offscreenCanvas = document.createElement('canvas');
 const offscreenCtx = offscreenCanvas.getContext('2d', { alpha: false });
 let imgData, data;
 
-// Initialize simulation dimensions based on aspect ratio
+// Initialize viewport dimensions based on aspect ratio
 function initSimulationSize() {
     const aspect = window.innerWidth / window.innerHeight;
     let initialW, initialH;
@@ -30,8 +35,8 @@ function initSimulationSize() {
     width = initialW;
     height = initialH;
 
-    // Initialize ChunkEngine with world height
-    ChunkEngine.init(height);
+    // Initialize ChunkEngine with fixed world size
+    ChunkEngine.init(WORLD_WIDTH, WORLD_HEIGHT);
 
     // Prepare offscreen rendering buffer
     offscreenCanvas.width = width;
@@ -47,7 +52,8 @@ const M = {
     STEAM: 8, FIREWORK: 9, VINE: 10, LAVA: 11, SPARK: 12, COAL: 13,
     EMBER: 14, ACID: 15, METHANE: 16, ICE: 17, TERMITE: 18, CONCRETE: 19,
     LIGHTNING: 20, TNT: 21, URANIUM: 22, BEDROCK: 23,
-    BATTERY: 24, WIRE: 25, BOOSTER: 26, LAMP: 27
+    BATTERY: 24, WIRE: 25, BOOSTER: 26, LAMP: 27,
+    REDSTONE_TORCH: 28, DETONATOR: 29, SENSOR: 30
 };
 const firePalette = [[0, 0, 0, 0], [160, 0, 0], [230, 90, 0], [255, 200, 0], [255, 255, 200]];
 
@@ -78,6 +84,9 @@ colors[M.BATTERY] = [30, 80, 50];   // Deep Emerald
 colors[M.WIRE] = [184, 115, 51];   // Copper
 colors[M.BOOSTER] = [70, 80, 90];  // Industrial Slate
 colors[M.LAMP] = [50, 50, 50];     // Dark Gray (Off)
+colors[M.REDSTONE_TORCH] = [255, 80, 50];   // Bright red
+colors[M.DETONATOR] = [180, 60, 60];        // Rust red
+colors[M.SENSOR] = [60, 80, 180];           // Blue-gray
 
 // --- STATE ---
 let currentMaterial = M.STONE;
@@ -123,6 +132,9 @@ const extraToolsSource = [
     { id: M.WIRE, name: 'DRAHT', col: 'bg-orange-600', border: 'border-orange-800', desc: 'Leitet Strom' },
     { id: M.BOOSTER, name: 'VERSTÄRKER', col: 'bg-slate-500', border: 'border-slate-700', desc: 'Frischt das Signal auf' },
     { id: M.LAMP, name: 'LAMPE', col: 'bg-yellow-700', border: 'border-yellow-900', desc: 'Leuchtet bei Strom' },
+    { id: M.REDSTONE_TORCH, name: 'FACKEL', col: 'bg-red-600', border: 'border-red-800', desc: 'Invertiert Strom' },
+    { id: M.DETONATOR, name: 'ZÜNDER', col: 'bg-red-800', border: 'border-red-950', desc: 'Zündet bei Strom' },
+    { id: M.SENSOR, name: 'SENSOR', col: 'bg-blue-700', border: 'border-blue-900', desc: 'Erkennt Veränderung' },
 ];
 
 let activeExtraTools = [];

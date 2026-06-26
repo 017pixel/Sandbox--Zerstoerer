@@ -15,20 +15,18 @@ function loadWorld(type) {
 
     // Reset camera to origin for scenarios
     cameraX = 0;
-
-    // Use viewport width for scenario generation
-    const genWidth = width;
+    cameraY = 0;
 
     if (type === 'forest') {
-        for (let x = 0; x < genWidth; x++) {
-            const groundY = height - 25 + Math.sin(x * 0.1) * 8 + Math.cos(x * 0.05) * 5;
-            for (let y = Math.floor(groundY); y < height - BEDROCK_DEPTH; y++) {
+        for (let x = 0; x < WORLD_WIDTH; x++) {
+            const groundY = WORLD_HEIGHT - 25 + Math.sin(x * 0.1) * 8 + Math.cos(x * 0.05) * 5;
+            for (let y = Math.floor(groundY); y < WORLD_HEIGHT - BEDROCK_DEPTH; y++) {
                 const mat = y > groundY + 5 ? M.STONE : M.SAND;
                 setPixel(x, y, mat);
             }
             setPixel(x, Math.floor(groundY), M.VINE);
 
-            if (Math.random() < 0.08 && x > 5 && x < genWidth - 5) {
+            if (Math.random() < 0.08 && x > 5 && x < WORLD_WIDTH - 5) {
                 drawTree(x, Math.floor(groundY));
                 if (Math.random() < 0.4) {
                     for (let i = 0; i < 5; i++) {
@@ -37,20 +35,20 @@ function loadWorld(type) {
                 }
             }
         }
-        drawCircle(Math.floor(genWidth * 0.3), height - BEDROCK_DEPTH - 5, 5, M.METHANE);
+        drawCircle(Math.floor(WORLD_WIDTH * 0.3), WORLD_HEIGHT - BEDROCK_DEPTH - 5, 5, M.METHANE);
     }
     else if (type === 'village') {
-        drawRect(0, height - BEDROCK_DEPTH - 15, genWidth, 15, M.STONE);
+        drawRect(0, WORLD_HEIGHT - BEDROCK_DEPTH - 15, WORLD_WIDTH, 15, M.STONE);
 
-        drawTree(Math.floor(genWidth * 0.1), height - BEDROCK_DEPTH - 15);
-        drawTree(Math.floor(genWidth * 0.35), height - BEDROCK_DEPTH - 15);
-        drawTree(Math.floor(genWidth * 0.65), height - BEDROCK_DEPTH - 15);
-        drawTree(Math.floor(genWidth * 0.9), height - BEDROCK_DEPTH - 15);
+        drawTree(Math.floor(WORLD_WIDTH * 0.1), WORLD_HEIGHT - BEDROCK_DEPTH - 15);
+        drawTree(Math.floor(WORLD_WIDTH * 0.35), WORLD_HEIGHT - BEDROCK_DEPTH - 15);
+        drawTree(Math.floor(WORLD_WIDTH * 0.65), WORLD_HEIGHT - BEDROCK_DEPTH - 15);
+        drawTree(Math.floor(WORLD_WIDTH * 0.9), WORLD_HEIGHT - BEDROCK_DEPTH - 15);
 
         const housePositions = [0.25, 0.7];
         housePositions.forEach(pos => {
-            const hx = Math.floor(genWidth * pos);
-            const hy = height - BEDROCK_DEPTH - 15;
+            const hx = Math.floor(WORLD_WIDTH * pos);
+            const hy = WORLD_HEIGHT - BEDROCK_DEPTH - 15;
 
             drawRect(hx - 10, hy - 20, 20, 20, M.WOOD);
             drawRect(hx - 2, hy - 5, 4, 3, M.TNT);
@@ -65,23 +63,23 @@ function loadWorld(type) {
         });
 
         for (let i = 0; i < 10; i++) {
-            setPixel(10 + Math.random() * 20, height - BEDROCK_DEPTH - 16, M.TERMITE);
+            setPixel(10 + Math.random() * 20, WORLD_HEIGHT - BEDROCK_DEPTH - 16, M.TERMITE);
         }
     }
     else if (type === 'island') {
-        const waterLevel = height - BEDROCK_DEPTH - 20;
-        drawRect(0, waterLevel, genWidth, 20, M.WATER);
+        const waterLevel = WORLD_HEIGHT - BEDROCK_DEPTH - 20;
+        drawRect(0, waterLevel, WORLD_WIDTH, 20, M.WATER);
 
         const getIslandY = (x) => {
-            const dx = (x - genWidth / 2) * 0.8;
+            const dx = (x - WORLD_WIDTH / 2) * 0.8;
             const dy = (dx * dx) / 60;
-            return height - BEDROCK_DEPTH - 40 + dy;
+            return WORLD_HEIGHT - BEDROCK_DEPTH - 40 + dy;
         };
 
-        for (let x = 0; x < genWidth; x++) {
+        for (let x = 0; x < WORLD_WIDTH; x++) {
             const groundY = getIslandY(x);
-            if (groundY < height - BEDROCK_DEPTH) {
-                for (let y = Math.floor(groundY); y < height - BEDROCK_DEPTH; y++) {
+            if (groundY < WORLD_HEIGHT - BEDROCK_DEPTH) {
+                for (let y = Math.floor(groundY); y < WORLD_HEIGHT - BEDROCK_DEPTH; y++) {
                     const mat = y < groundY + 12 ? M.SAND : M.STONE;
                     setPixel(x, y, mat);
                 }
@@ -89,10 +87,10 @@ function loadWorld(type) {
         }
 
         [0.35, 0.5, 0.65].forEach(xp => {
-            const hx = Math.floor(genWidth * xp);
+            const hx = Math.floor(WORLD_WIDTH * xp);
             const hy = Math.floor(getIslandY(hx));
 
-            if (hy < height - BEDROCK_DEPTH) {
+            if (hy < WORLD_HEIGHT - BEDROCK_DEPTH) {
                 const trunkH = 20 + Math.random() * 10;
                 for (let i = 0; i < trunkH; i++) {
                     const offset = Math.sin(i * 0.2) * 2;
@@ -114,60 +112,60 @@ function loadWorld(type) {
         });
     }
     else if (type === 'volcano') {
-        for (let x = 0; x < genWidth; x++) {
-            const dx = Math.abs(x - genWidth / 2);
+        for (let x = 0; x < WORLD_WIDTH; x++) {
+            const dx = Math.abs(x - WORLD_WIDTH / 2);
             const h = 80 - dx * 0.9;
             if (h > 0) {
-                for (let y = height - BEDROCK_DEPTH - h; y < height - BEDROCK_DEPTH; y++) {
+                for (let y = WORLD_HEIGHT - BEDROCK_DEPTH - h; y < WORLD_HEIGHT - BEDROCK_DEPTH; y++) {
                     const mat = Math.random() < 0.1 ? M.COAL : M.STONE;
                     setPixel(x, y, mat);
                 }
-                if (Math.random() < 0.3) setPixel(x, height - BEDROCK_DEPTH - h, M.EMBER);
+                if (Math.random() < 0.3) setPixel(x, WORLD_HEIGHT - BEDROCK_DEPTH - h, M.EMBER);
             }
         }
-        drawRect(Math.floor(genWidth / 2) - 4, height - BEDROCK_DEPTH - 80, 8, 70, M.LAVA);
-        drawCircle(Math.floor(genWidth / 2), height - BEDROCK_DEPTH - 90, 6, M.METHANE);
+        drawRect(Math.floor(WORLD_WIDTH / 2) - 4, WORLD_HEIGHT - BEDROCK_DEPTH - 80, 8, 70, M.LAVA);
+        drawCircle(Math.floor(WORLD_WIDTH / 2), WORLD_HEIGHT - BEDROCK_DEPTH - 90, 6, M.METHANE);
     }
     else if (type === 'mine') {
-        drawRect(0, 0, genWidth, height - BEDROCK_DEPTH, M.STONE);
+        drawRect(0, 0, WORLD_WIDTH, WORLD_HEIGHT - BEDROCK_DEPTH, M.STONE);
 
         const shaftWidth = 12;
         [0.2, 0.5, 0.8].forEach(pos => {
-            const sx = Math.floor(genWidth * pos);
-            drawRect(sx - shaftWidth / 2, 0, shaftWidth, height - BEDROCK_DEPTH, M.AIR);
+            const sx = Math.floor(WORLD_WIDTH * pos);
+            drawRect(sx - shaftWidth / 2, 0, shaftWidth, WORLD_HEIGHT - BEDROCK_DEPTH, M.AIR);
 
-            for (let y = 10; y < height - BEDROCK_DEPTH; y += 30) {
+            for (let y = 10; y < WORLD_HEIGHT - BEDROCK_DEPTH; y += 30) {
                 drawRect(sx - shaftWidth / 2, y, shaftWidth, 2, M.WOOD);
                 setPixel(sx, y + 2, M.METHANE);
             }
         });
 
         [0.25, 0.5, 0.75].forEach(pos => {
-            const sy = Math.floor((height - BEDROCK_DEPTH) * pos);
-            drawRect(0, sy, genWidth, 8, M.AIR);
+            const sy = Math.floor((WORLD_HEIGHT - BEDROCK_DEPTH) * pos);
+            drawRect(0, sy, WORLD_WIDTH, 8, M.AIR);
 
-            for (let x = 15; x < genWidth; x += 40) {
+            for (let x = 15; x < WORLD_WIDTH; x += 40) {
                 drawRect(x, sy, 2, 8, M.WOOD);
             }
         });
 
-        drawRect(Math.floor(genWidth * 0.5) - 5, Math.floor((height - BEDROCK_DEPTH) * 0.5) + 5, 10, 5, M.TNT);
-        drawCircle(Math.floor(genWidth * 0.1), Math.floor((height - BEDROCK_DEPTH) * 0.1), 8, M.METHANE);
-        drawCircle(Math.floor(genWidth * 0.9), Math.floor((height - BEDROCK_DEPTH) * 0.8), 6, M.METHANE);
+        drawRect(Math.floor(WORLD_WIDTH * 0.5) - 5, Math.floor((WORLD_HEIGHT - BEDROCK_DEPTH) * 0.5) + 5, 10, 5, M.TNT);
+        drawCircle(Math.floor(WORLD_WIDTH * 0.1), Math.floor((WORLD_HEIGHT - BEDROCK_DEPTH) * 0.1), 8, M.METHANE);
+        drawCircle(Math.floor(WORLD_WIDTH * 0.9), Math.floor((WORLD_HEIGHT - BEDROCK_DEPTH) * 0.8), 6, M.METHANE);
 
         for (let i = 0; i < 30; i++) {
-            const rx = Math.random() * genWidth;
-            const ry = Math.random() * (height - BEDROCK_DEPTH);
+            const rx = Math.random() * WORLD_WIDTH;
+            const ry = Math.random() * (WORLD_HEIGHT - BEDROCK_DEPTH);
             if (ChunkEngine.getV(Math.floor(rx), Math.floor(ry)) === M.WOOD) {
                 setPixel(rx, ry, M.TERMITE);
             }
         }
     }
     else if (type === 'ice') {
-        const waterLvl = height - BEDROCK_DEPTH - 20;
-        drawRect(0, waterLvl, genWidth, 20, M.WATER);
+        const waterLvl = WORLD_HEIGHT - BEDROCK_DEPTH - 20;
+        drawRect(0, waterLvl, WORLD_WIDTH, 20, M.WATER);
 
-        const cx = Math.floor(genWidth / 2);
+        const cx = Math.floor(WORLD_WIDTH / 2);
         const cy = waterLvl;
 
         drawRect(cx - 50, cy - 8, 100, 12, M.ICE);
@@ -199,7 +197,7 @@ function loadWorld(type) {
         }
 
         for (let i = 0; i < 60; i++) {
-            setPixel(Math.random() * genWidth, Math.random() * 40, M.ICE);
+            setPixel(Math.random() * WORLD_WIDTH, Math.random() * 40, M.ICE);
         }
 
         for (let i = 0; i < 8; i++) {
@@ -207,25 +205,25 @@ function loadWorld(type) {
         }
     }
     else if (type === 'cave') {
-        drawRect(0, 0, genWidth, height - BEDROCK_DEPTH, M.STONE);
-        for (let x = 0; x < genWidth; x++) {
-            for (let y = 0; y < height - BEDROCK_DEPTH; y++) {
+        drawRect(0, 0, WORLD_WIDTH, WORLD_HEIGHT - BEDROCK_DEPTH, M.STONE);
+        for (let x = 0; x < WORLD_WIDTH; x++) {
+            for (let y = 0; y < WORLD_HEIGHT - BEDROCK_DEPTH; y++) {
                 const n = Math.sin(x * 0.08) + Math.sin(y * 0.08) + Math.cos((x + y) * 0.04);
                 if (n > 0.6) setPixel(x, y, M.AIR);
                 else if (n < -0.9) setPixel(x, y, M.COAL);
             }
         }
-        drawRect(Math.floor(genWidth * 0.3), height - BEDROCK_DEPTH - 6, 30, 5, M.ACID);
+        drawRect(Math.floor(WORLD_WIDTH * 0.3), WORLD_HEIGHT - BEDROCK_DEPTH - 6, 30, 5, M.ACID);
         for (let i = 0; i < 20; i++) {
-            setPixel(Math.random() * genWidth, Math.random() * (height - BEDROCK_DEPTH), M.TERMITE);
+            setPixel(Math.random() * WORLD_WIDTH, Math.random() * (WORLD_HEIGHT - BEDROCK_DEPTH), M.TERMITE);
         }
     }
     else if (type === 'labyrinth') {
-        drawRect(0, 0, genWidth, height - BEDROCK_DEPTH, M.STONE);
+        drawRect(0, 0, WORLD_WIDTH, WORLD_HEIGHT - BEDROCK_DEPTH, M.STONE);
 
         const cellSize = 8;
-        const gridW = Math.floor(genWidth / cellSize);
-        const gridH = Math.floor((height - BEDROCK_DEPTH) / cellSize);
+        const gridW = Math.floor(WORLD_WIDTH / cellSize);
+        const gridH = Math.floor((WORLD_HEIGHT - BEDROCK_DEPTH) / cellSize);
 
         const mazeCols = Math.floor((gridW - 2) / 2) * 2 + 1;
         const mazeRows = Math.floor((gridH - 2) / 2) * 2 + 1;
@@ -263,8 +261,8 @@ function loadWorld(type) {
             }
         }
 
-        const mx = Math.floor((genWidth - mazeCols * cellSize) / 2);
-        const my = Math.floor(((height - BEDROCK_DEPTH) - mazeRows * cellSize) / 2);
+        const mx = Math.floor((WORLD_WIDTH - mazeCols * cellSize) / 2);
+        const my = Math.floor(((WORLD_HEIGHT - BEDROCK_DEPTH) - mazeRows * cellSize) / 2);
 
         for (let y = 0; y < mazeRows; y++) {
             for (let x = 0; x < mazeCols; x++) {
@@ -277,7 +275,7 @@ function loadWorld(type) {
         drawRect(mx + cellSize, 0, cellSize, my + cellSize, M.WOOD);
         const exitX = (mazeCols - 2) * cellSize;
         const exitY = (mazeRows - 1) * cellSize;
-        drawRect(mx + exitX, my + exitY, cellSize, (height - BEDROCK_DEPTH) - (my + exitY), M.WOOD);
+        drawRect(mx + exitX, my + exitY, cellSize, (WORLD_HEIGHT - BEDROCK_DEPTH) - (my + exitY), M.WOOD);
 
         const centerX = Math.floor(mazeCols / 2);
         const centerY = Math.floor(mazeRows / 2);

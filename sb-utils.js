@@ -25,7 +25,6 @@ function resize() {
     if (newW !== width || newH !== height) {
         width = newW;
         height = newH;
-        ChunkEngine.height = height; // Sync height
 
         // Resize offscreen rendering buffer
         offscreenCanvas.width = width;
@@ -38,12 +37,14 @@ window.addEventListener('resize', resize);
 resize();
 
 // --- HELPER ---
-// Set pixel in world coordinates (infinite X)
+// Set pixel in world coordinates (fixed world bounds)
 function setPixel(x, y, mat) {
-    if (y >= 0 && y < height) {
-        ChunkEngine.setV(Math.floor(x), Math.floor(y), mat);
-        ChunkEngine.setHeat(Math.floor(x), Math.floor(y), 0);
-        ChunkEngine.setLiquidDir(Math.floor(x), Math.floor(y), 0);
+    const ix = Math.floor(x);
+    const iy = Math.floor(y);
+    if (ix >= 0 && ix < WORLD_WIDTH && iy >= 0 && iy < WORLD_HEIGHT) {
+        ChunkEngine.setV(ix, iy, mat);
+        ChunkEngine.setHeat(ix, iy, 0);
+        ChunkEngine.setLiquidDir(ix, iy, 0);
     }
 }
 
@@ -89,19 +90,16 @@ function getPos(e) {
     const worldY = cameraY + (viewY / zoom);
 
     return {
-        x: Math.floor(worldX),
-        y: Math.floor(worldY)
+        x: Math.max(0, Math.min(WORLD_WIDTH - 1, Math.floor(worldX))),
+        y: Math.max(0, Math.min(WORLD_HEIGHT - 1, Math.floor(worldY)))
     };
 }
 
-// Reset world - clear all chunks
+// Reset world - clear all data and regenerate bedrock
 function resetWorld() {
     ChunkEngine.clearWorld();
     meltdownActive = false;
     meltdownTimer = 0;
-    // Load initial chunks around camera
-    const viewWidth = width / zoom;
-    ChunkEngine.loadChunksForViewport(Math.floor(cameraX), Math.floor(cameraX + viewWidth));
     // Exit edit mode if function exists
     if (typeof exitEditMode === 'function') exitEditMode();
 }

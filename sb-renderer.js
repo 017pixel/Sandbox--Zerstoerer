@@ -1,38 +1,35 @@
 // =============================================================================
-// sb-renderer.js - Rendering for Infinite World
+// sb-renderer.js - Rendering for Fixed World
 // =============================================================================
-
-// Fire Palette (Heat > 0)
-// Fire Palette is defined in sb-data.js
 
 function draw() {
     const time = Date.now() * 0.002;
+    const W = WORLD_WIDTH;
+    const H = WORLD_HEIGHT;
 
     // Viewport Calculations
     const viewWidth = width / zoom;
     const viewHeight = height / zoom;
+
+    // Clamp camera to world bounds
+    const maxCamX = Math.max(0, W - viewWidth);
+    const maxCamY = Math.max(0, H - viewHeight);
+    cameraX = Math.max(0, Math.min(cameraX, maxCamX));
+    cameraY = Math.max(0, Math.min(cameraY, maxCamY));
+
     const startX = Math.floor(cameraX);
     const startY = Math.floor(cameraY);
-
-    // Ensure active chunks are loaded (for physics mostly, but also rendering)
-    const endX = Math.floor(cameraX + viewWidth);
-    ChunkEngine.loadChunksForViewport(startX, endX);
 
     const imgData = offscreenCtx.createImageData(width, height);
     const data = imgData.data;
 
     for (let y = 0; y < height; y++) {
-        // Calculate worldY based on cameraY (vertical panning)
-        // cameraY shifts the view up/down. Positive cameraY moves view down (seeing higher up in world?)
-        // Wait, standard convention: cameraY is top-left of view.
-        // screen y=0 corresponds to worldY = startY.
         const worldY = Math.floor(startY + y / zoom);
 
-        if (worldY < 0 || worldY >= ChunkEngine.height) {
-            // Out of bounds (Sky or Void)
+        if (worldY < 0 || worldY >= H) {
             for (let x = 0; x < width; x++) {
                 const idx = (y * width + x) * 4;
-                const grad = y / height; // Screen gradient
+                const grad = y / height;
                 data[idx] = 15 + (grad * 5);
                 data[idx + 1] = 23 + (grad * 10);
                 data[idx + 2] = 42 + (grad * 20);
@@ -43,14 +40,22 @@ function draw() {
 
         for (let x = 0; x < width; x++) {
             const worldX = Math.floor(startX + x / zoom);
+            if (worldX < 0 || worldX >= W) {
+                const idx = (y * width + x) * 4;
+                const grad = y / height;
+                data[idx] = 15 + (grad * 5);
+                data[idx + 1] = 23 + (grad * 10);
+                data[idx + 2] = 42 + (grad * 20);
+                data[idx + 3] = 255;
+                continue;
+            }
 
-            // Get cell data from ChunkEngine
             const cell = ChunkEngine.getV(worldX, worldY);
             const heat = ChunkEngine.getHeat(worldX, worldY);
 
             let r, g, b;
 
-            // --- MATERIAL RENDERING LOGIC ---
+            // --- MATERIAL RENDERING ---
             if (cell === M.WIRE) {
                 const wire = ChunkEngine.getWire(worldX, worldY);
                 const f = wire / 255;
@@ -70,10 +75,8 @@ function draw() {
             }
             else if (cell === M.BOOSTER) {
                 const wire = ChunkEngine.getWire(worldX, worldY);
-                // Base: Industrial Slate Gray
                 r = 70; g = 80; b = 90;
                 if (wire > 100) {
-                    // Active indicator: Bright Cyan/Blue pulse
                     const glow = Math.sin(time * 10) * 20 + 30;
                     r += 20 + glow;
                     g += 100 + glow;
@@ -81,12 +84,45 @@ function draw() {
                 }
             }
             else if (cell === M.BATTERY) {
-                // Base: Dark Emerald
                 r = 30; g = 80; b = 50;
-                // Pulsing Green Core
                 const pulse = Math.sin(time * 4) * 20 + 20;
                 g = Math.min(255, g + 80 + pulse);
                 r = Math.min(255, r + 10 + pulse * 0.5);
+            }
+            else if (cell === M.REDSTONE_TORCH) {
+                const wire = ChunkEngine.getWire(worldX, worldY);
+                if (wire > 0) {
+                    const pulse = Math.sin(time * 10 + worldX * 0.4) * 25 + 25;
+                    r = 255;
+                    g = 60 + pulse;
+                    b = 30 + pulse * 0.3;
+                } else {
+                    r = 80; g = 20; b = 10;
+                }
+            }
+            else if (cell === M.DETONATOR) {
+                const wire = ChunkEngine.getWire(worldX, worldY);
+                const adjPowered = (worldX > 0 && ChunkEngine.getV(worldX - 1, worldY) === M.WIRE && ChunkEngine.getWire(worldX - 1, worldY) > 50) ||
+                    (worldX < W - 1 && ChunkEngine.getV(worldX + 1, worldY) === M.WIRE && ChunkEngine.getWire(worldX + 1, worldY) > 50) ||
+                    (worldY > 0 && ChunkEngine.getV(worldX, worldY - 1) === M.WIRE && ChunkEngine.getWire(worldX, worldY - 1) > 50) ||
+                    (worldY < H - 1 && ChunkEngine.getV(worldX, worldY + 1) === M.WIRE && ChunkEngine.getWire(worldX, worldY + 1) > 50);
+                if (adjPowered || wire > 50) {
+                    const blink = Math.sin(time * 16) > 0 ? 255 : 120;
+                    r = blink; g = 50; b = 50;
+                } else {
+                    r = 180; g = 60; b = 60;
+                }
+            }
+            else if (cell === M.SENSOR) {
+                const wire = ChunkEngine.getWire(worldX, worldY);
+                if (wire > 0) {
+                    const pulse = Math.sin(time * 8) * 20 + 20;
+                    r = 40 + pulse;
+                    g = 140 + pulse;
+                    b = 255;
+                } else {
+                    r = 60; g = 80; b = 180;
+                }
             }
             else if (cell === M.AIR || cell === M.FIREWORK) {
                 if (heat > 0) {
@@ -99,17 +135,14 @@ function draw() {
                     if (palIdx > 0) {
                         [r, g, b] = firePalette[palIdx];
                     } else {
-                        // Atmosphere gradient
                         const grad = y / height;
                         r = 15 + (grad * 5); g = 23 + (grad * 10); b = 42 + (grad * 20);
                     }
                 } else {
                     const grad = y / height;
                     r = 15 + (grad * 5); g = 23 + (grad * 10); b = 42 + (grad * 20);
-                    // Add noise map for clouds/texture
                     const noise = Math.sin(worldX * 0.04 + time * 0.2) + Math.sin((worldX + worldY) * 0.02) + Math.sin(worldY * 0.1);
-                    // Cloud layer higher up?
-                    let mask = 1 - (worldY / (ChunkEngine.height * 0.45)); // Clouds only in top 45%
+                    let mask = 1 - (worldY / (H * 0.45));
                     mask = Math.max(0, mask);
 
                     if (noise > 0.5 && mask > 0) {
@@ -118,7 +151,6 @@ function draw() {
                     }
                 }
 
-                // Firework Spark Overlay (Slightly fake, but works for now)
                 if (cell === M.FIREWORK) {
                     r += 40; b += 40;
                 }
@@ -145,7 +177,6 @@ function draw() {
                 r = 160 + pulse * 60; g = 40 + pulse * 20; b = 20;
             }
             else if (cell === M.BEDROCK) {
-                // Bedrock pattern
                 const noise = ((worldX * 17 + worldY * 31) % 10) / 10;
                 r = 25 + noise * 15;
                 g = 25 + noise * 15;
@@ -154,7 +185,6 @@ function draw() {
             else {
                 if (colors[cell]) {
                     [r, g, b] = colors[cell];
-                    // Noise texture
                     if (cell !== M.WATER && cell !== M.STEAM) {
                         const noise = (Math.random() - 0.5) * 15;
                         r += noise; g += noise; b += noise;
@@ -172,7 +202,7 @@ function draw() {
                         if (Math.random() > 0.8) { r += 40; g += 40; }
                     }
                 } else {
-                    r = 255; g = 0; b = 255; // Magenta error
+                    r = 255; g = 0; b = 255;
                 }
             }
 
@@ -191,9 +221,8 @@ function draw() {
     ctx.clearRect(0, 0, canvas.width, canvas.height);
     ctx.imageSmoothingEnabled = false;
 
-    // Scale the internal simulation buffer (width/height) to the display canvas size
     ctx.drawImage(offscreenCanvas,
-        0, 0, width, height,                    // Source (Simulation)
-        0, 0, canvas.width, canvas.height       // Destination (Screen)
+        0, 0, width, height,
+        0, 0, canvas.width, canvas.height
     );
 }

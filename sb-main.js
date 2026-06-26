@@ -30,7 +30,7 @@ function paint(e) {
             const py = y + dy;
             const px = x + dx;
 
-            if (py >= 0 && py < height) {
+            if (py >= 0 && py < WORLD_HEIGHT && px >= 0 && px < WORLD_WIDTH) {
                 const existing = ChunkEngine.getV(px, py);
 
                 // Firework already present? skip
@@ -108,6 +108,8 @@ canvas.addEventListener('wheel', e => {
     // Adjust cameraX so the world point under mouse stays there
     if (zoom !== oldZoom) {
         cameraX = worldXAtMouse - (viewX / zoom);
+        const maxCamX = Math.max(0, WORLD_WIDTH - (width / zoom));
+        cameraX = Math.max(0, Math.min(cameraX, maxCamX));
     }
 }, { passive: false });
 
@@ -138,10 +140,12 @@ window.addEventListener('mousemove', e => {
         cameraX -= worldDeltaX;
         cameraY -= worldDeltaY;
 
+        // Clamp Camera X
+        const maxCamX = Math.max(0, WORLD_WIDTH - (width / zoom));
+        cameraX = Math.max(0, Math.min(cameraX, maxCamX));
+
         // Clamp Camera Y
-        // We want 0 <= cameraY. 
-        // And cameraY + (height/zoom) <= height
-        const maxCamY = Math.max(0, height - (height / zoom));
+        const maxCamY = Math.max(0, WORLD_HEIGHT - (height / zoom));
         cameraY = Math.max(0, Math.min(cameraY, maxCamY));
 
         lastPanX = e.clientX;
@@ -185,6 +189,8 @@ function handleTouch(e) {
             // Adjust cameraX so focal point stays under fingers
             if (zoom !== oldZoom) {
                 cameraX = worldXAtMid - (viewX / zoom);
+                const maxCamX = Math.max(0, WORLD_WIDTH - (width / zoom));
+                cameraX = Math.max(0, Math.min(cameraX, maxCamX));
             }
 
             // PAN (movement of midpoint)
@@ -195,9 +201,11 @@ function handleTouch(e) {
             cameraX -= worldPanDeltaX;
             cameraY -= worldPanDeltaY;
 
-            // Clamp Camera Y
-            const maxCamY = Math.max(0, height - (height / zoom));
-            cameraY = Math.max(0, Math.min(cameraY, maxCamY));
+            // Clamp Camera
+            const maxCamX2 = Math.max(0, WORLD_WIDTH - (width / zoom));
+            cameraX = Math.max(0, Math.min(cameraX, maxCamX2));
+            const maxCamY2 = Math.max(0, WORLD_HEIGHT - (height / zoom));
+            cameraY = Math.max(0, Math.min(cameraY, maxCamY2));
         }
 
         lastPinchDist = data.dist;

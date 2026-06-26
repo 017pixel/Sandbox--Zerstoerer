@@ -1,222 +1,167 @@
 // =============================================================================
-// sb-chunk.js - Infinite World Chunk Engine
+// sb-chunk.js - Fixed World Data Engine
 // =============================================================================
-// Manages chunks of the world. Each chunk is a vertical slice of width CHUNK_WIDTH.
-// Chunks are lazily generated and only simulated when near the viewport.
+// Flat 2D arrays for a fixed-size world (WORLD_WIDTH x WORLD_HEIGHT).
+// Replaces the old chunk-based Map system.
 
-const CHUNK_WIDTH = 32;
-const BEDROCK_DEPTH = 5; // Bottom 5 pixels are bedrock
+const BEDROCK_DEPTH = 5;
 
-// ChunkEngine - Central manager for all world data
 const ChunkEngine = {
-    chunks: new Map(), // key: chunkX (integer), value: { grid, heatMap, liquidDir, fireworkVel, sparkColors, wireMap }
-    height: 0, // Set during init from sb-data.js
+    worldWidth: 0,
+    worldHeight: 0,
+    grid: null,         // Int8Array   — material type per cell
+    heatMap: null,      // Uint8Array  — heat level (0-255)
+    liquidDir: null,    // Int8Array   — liquid flow direction (-1 or +1)
+    fireworkVel: null,  // Int16Array  — firework remaining velocity
+    sparkColors: null,  // Uint32Array — spark RGB color
+    wireMap: null,      // Uint8Array  — electricity signal (0-255)
+    prevGrid: null,     // Int8Array   — grid snapshot for sensor change detection
 
-    init(worldHeight) {
-        this.height = worldHeight;
-        this.chunks.clear();
+    init(w, h) {
+        this.worldWidth = w;
+        this.worldHeight = h;
+        const size = w * h;
+        this.grid = new Int8Array(size);
+        this.heatMap = new Uint8Array(size);
+        this.liquidDir = new Int8Array(size);
+        this.fireworkVel = new Int16Array(size);
+        this.sparkColors = new Uint32Array(size);
+        this.wireMap = new Uint8Array(size);
+        this.prevGrid = new Int8Array(size);
+        this._generateBedrock();
+        this.prevGrid.set(this.grid);
     },
 
-    // Get chunk X index from world X coordinate
-    getChunkX(worldX) {
-        return Math.floor(worldX / CHUNK_WIDTH);
-    },
-
-    // Ensure a chunk exists, create if not
-    ensureChunk(chunkX) {
-        if (this.chunks.has(chunkX)) return this.chunks.get(chunkX);
-
-        const size = CHUNK_WIDTH * this.height;
-        const chunk = {
-            grid: new Int8Array(size),
-            heatMap: new Uint8Array(size),
-            liquidDir: new Int8Array(size),
-            fireworkVel: new Int16Array(size),
-            sparkColors: new Uint32Array(size),
-            wireMap: new Uint8Array(size) // Stores electricity (0-255)
-        };
-
-        // Generate bedrock at bottom
-        for (let x = 0; x < CHUNK_WIDTH; x++) {
-            for (let y = this.height - BEDROCK_DEPTH; y < this.height; y++) {
-                const idx = y * CHUNK_WIDTH + x;
-                chunk.grid[idx] = M.BEDROCK;
+    _generateBedrock() {
+        for (let x = 0; x < this.worldWidth; x++) {
+            for (let y = this.worldHeight - BEDROCK_DEPTH; y < this.worldHeight; y++) {
+                const idx = y * this.worldWidth + x;
+                this.grid[idx] = M.BEDROCK;
             }
         }
-
-        this.chunks.set(chunkX, chunk);
-        return chunk;
     },
 
-    // Get value at world coordinates
-    getV(worldX, worldY) {
-        if (worldY < 0 || worldY >= this.height) return M.AIR;
-        const chunkX = this.getChunkX(worldX);
-        const localX = ((worldX % CHUNK_WIDTH) + CHUNK_WIDTH) % CHUNK_WIDTH;
-        const chunk = this.chunks.get(chunkX);
-        if (!chunk) return M.AIR;
-        return chunk.grid[worldY * CHUNK_WIDTH + localX];
+    // Flat index helper
+    _idx(x, y) {
+        if (x < 0 || x >= this.worldWidth || y < 0 || y >= this.worldHeight) return -1;
+        return y * this.worldWidth + x;
     },
 
-    // Set value at world coordinates
-    setV(worldX, worldY, val) {
-        if (worldY < 0 || worldY >= this.height) return;
-        const chunkX = this.getChunkX(worldX);
-        const localX = ((worldX % CHUNK_WIDTH) + CHUNK_WIDTH) % CHUNK_WIDTH;
-        const chunk = this.ensureChunk(chunkX);
-        const idx = worldY * CHUNK_WIDTH + localX;
-        if (chunk.grid[idx] === M.BEDROCK && val !== M.BEDROCK) return;
-        chunk.grid[idx] = val;
+    inBounds(x, y) {
+        return x >= 0 && x < this.worldWidth && y >= 0 && y < this.worldHeight;
     },
 
-    // Heat map accessors
-    getHeat(worldX, worldY) {
-        if (worldY < 0 || worldY >= this.height) return 0;
-        const chunkX = this.getChunkX(worldX);
-        const localX = ((worldX % CHUNK_WIDTH) + CHUNK_WIDTH) % CHUNK_WIDTH;
-        const chunk = this.chunks.get(chunkX);
-        if (!chunk) return 0;
-        return chunk.heatMap[worldY * CHUNK_WIDTH + localX];
+    // --- Grid (material) ---
+    getV(x, y) {
+        const idx = this._idx(x, y);
+        if (idx < 0) return M.AIR;
+        return this.grid[idx];
     },
 
-    setHeat(worldX, worldY, val) {
-        if (worldY < 0 || worldY >= this.height) return;
-        const chunkX = this.getChunkX(worldX);
-        const localX = ((worldX % CHUNK_WIDTH) + CHUNK_WIDTH) % CHUNK_WIDTH;
-        const chunk = this.ensureChunk(chunkX);
-        chunk.heatMap[worldY * CHUNK_WIDTH + localX] = val;
+    setV(x, y, val) {
+        const idx = this._idx(x, y);
+        if (idx < 0) return;
+        if (this.grid[idx] === M.BEDROCK && val !== M.BEDROCK) return;
+        this.grid[idx] = val;
     },
 
-    // Wire map accessors
-    getWire(worldX, worldY) {
-        if (worldY < 0 || worldY >= this.height) return 0;
-        const chunkX = this.getChunkX(worldX);
-        const localX = ((worldX % CHUNK_WIDTH) + CHUNK_WIDTH) % CHUNK_WIDTH;
-        const chunk = this.chunks.get(chunkX);
-        if (!chunk) return 0;
-        return chunk.wireMap[worldY * CHUNK_WIDTH + localX];
+    // --- Heat Map ---
+    getHeat(x, y) {
+        const idx = this._idx(x, y);
+        if (idx < 0) return 0;
+        return this.heatMap[idx];
     },
 
-    setWire(worldX, worldY, val) {
-        if (worldY < 0 || worldY >= this.height) return;
-        const chunkX = this.getChunkX(worldX);
-        const localX = ((worldX % CHUNK_WIDTH) + CHUNK_WIDTH) % CHUNK_WIDTH;
-        const chunk = this.ensureChunk(chunkX);
-        chunk.wireMap[worldY * CHUNK_WIDTH + localX] = val;
+    setHeat(x, y, val) {
+        const idx = this._idx(x, y);
+        if (idx < 0) return;
+        this.heatMap[idx] = val;
     },
 
-    // Liquid direction accessors
-    getLiquidDir(worldX, worldY) {
-        if (worldY < 0 || worldY >= this.height) return 0;
-        const chunkX = this.getChunkX(worldX);
-        const localX = ((worldX % CHUNK_WIDTH) + CHUNK_WIDTH) % CHUNK_WIDTH;
-        const chunk = this.chunks.get(chunkX);
-        if (!chunk) return 0;
-        return chunk.liquidDir[worldY * CHUNK_WIDTH + localX];
+    // --- Wire Map ---
+    getWire(x, y) {
+        const idx = this._idx(x, y);
+        if (idx < 0) return 0;
+        return this.wireMap[idx];
     },
 
-    setLiquidDir(worldX, worldY, val) {
-        if (worldY < 0 || worldY >= this.height) return;
-        const chunkX = this.getChunkX(worldX);
-        const localX = ((worldX % CHUNK_WIDTH) + CHUNK_WIDTH) % CHUNK_WIDTH;
-        const chunk = this.ensureChunk(chunkX);
-        chunk.liquidDir[worldY * CHUNK_WIDTH + localX] = val;
+    setWire(x, y, val) {
+        const idx = this._idx(x, y);
+        if (idx < 0) return;
+        this.wireMap[idx] = val;
     },
 
-    // Firework velocity accessors
-    getFireworkVel(worldX, worldY) {
-        if (worldY < 0 || worldY >= this.height) return 0;
-        const chunkX = this.getChunkX(worldX);
-        const localX = ((worldX % CHUNK_WIDTH) + CHUNK_WIDTH) % CHUNK_WIDTH;
-        const chunk = this.chunks.get(chunkX);
-        if (!chunk) return 0;
-        return chunk.fireworkVel[worldY * CHUNK_WIDTH + localX];
+    // --- Liquid Direction ---
+    getLiquidDir(x, y) {
+        const idx = this._idx(x, y);
+        if (idx < 0) return 0;
+        return this.liquidDir[idx];
     },
 
-    setFireworkVel(worldX, worldY, val) {
-        if (worldY < 0 || worldY >= this.height) return;
-        const chunkX = this.getChunkX(worldX);
-        const localX = ((worldX % CHUNK_WIDTH) + CHUNK_WIDTH) % CHUNK_WIDTH;
-        const chunk = this.ensureChunk(chunkX);
-        chunk.fireworkVel[worldY * CHUNK_WIDTH + localX] = val;
+    setLiquidDir(x, y, val) {
+        const idx = this._idx(x, y);
+        if (idx < 0) return;
+        this.liquidDir[idx] = val;
     },
 
-    // Spark colors accessors
-    getSparkColor(worldX, worldY) {
-        if (worldY < 0 || worldY >= this.height) return 0;
-        const chunkX = this.getChunkX(worldX);
-        const localX = ((worldX % CHUNK_WIDTH) + CHUNK_WIDTH) % CHUNK_WIDTH;
-        const chunk = this.chunks.get(chunkX);
-        if (!chunk) return 0;
-        return chunk.sparkColors[worldY * CHUNK_WIDTH + localX];
+    // --- Firework Velocity ---
+    getFireworkVel(x, y) {
+        const idx = this._idx(x, y);
+        if (idx < 0) return 0;
+        return this.fireworkVel[idx];
     },
 
-    setSparkColor(worldX, worldY, val) {
-        if (worldY < 0 || worldY >= this.height) return;
-        const chunkX = this.getChunkX(worldX);
-        const localX = ((worldX % CHUNK_WIDTH) + CHUNK_WIDTH) % CHUNK_WIDTH;
-        const chunk = this.ensureChunk(chunkX);
-        chunk.sparkColors[worldY * CHUNK_WIDTH + localX] = val;
+    setFireworkVel(x, y, val) {
+        const idx = this._idx(x, y);
+        if (idx < 0) return;
+        this.fireworkVel[idx] = val;
     },
 
-    // Get list of chunk indices that should be active (visible + buffer)
-    getActiveChunkIndices(viewportStartX, viewportEndX) {
-        const startChunk = this.getChunkX(viewportStartX) - 1; // 1 chunk buffer
-        const endChunk = this.getChunkX(viewportEndX) + 1;
-        const indices = [];
-        for (let i = startChunk; i <= endChunk; i++) {
-            indices.push(i);
-        }
-        return indices;
+    // --- Spark Colors ---
+    getSparkColor(x, y) {
+        const idx = this._idx(x, y);
+        if (idx < 0) return 0;
+        return this.sparkColors[idx];
     },
 
-    // Load chunks for a viewport range (ensures they exist)
-    loadChunksForViewport(viewportStartX, viewportEndX) {
-        const indices = this.getActiveChunkIndices(viewportStartX, viewportEndX);
-        for (const idx of indices) {
-            this.ensureChunk(idx);
-        }
-        return indices;
+    setSparkColor(x, y, val) {
+        const idx = this._idx(x, y);
+        if (idx < 0) return;
+        this.sparkColors[idx] = val;
     },
 
-    // Clear world - reset all chunks
+    // --- Snapshot grid for sensor change detection ---
+    snapshotGrid() {
+        this.prevGrid.set(this.grid);
+    },
+
+    // --- Clear world ---
     clearWorld() {
-        this.chunks.clear();
+        const size = this.worldWidth * this.worldHeight;
+        this.grid.fill(0);
+        this.heatMap.fill(0);
+        this.liquidDir.fill(0);
+        this.fireworkVel.fill(0);
+        this.sparkColors.fill(0);
+        this.wireMap.fill(0);
+        this.prevGrid.fill(0);
+        this._generateBedrock();
+        this.prevGrid.set(this.grid);
     },
 
-    // Export world data for saving
+    // --- Export / Import for saving ---
     exportWorld() {
-        const exportData = [];
-        for (const [x, chunk] of this.chunks) {
-            // Include wireMap in export if present
-            exportData.push({
-                x: x,
-                grid: chunk.grid,
-                wireMap: chunk.wireMap // Also save wire state
-            });
-        }
-        return exportData;
+        return {
+            grid: new Int8Array(this.grid),
+            wireMap: new Uint8Array(this.wireMap)
+        };
     },
 
-    // Import world data
     importWorld(data) {
-        this.clearWorld();
-        if (Array.isArray(data)) {
-            for (const chunkData of data) {
-                const chunk = this.ensureChunk(chunkData.x);
-                if (chunkData.grid) chunk.grid.set(chunkData.grid);
-                if (chunkData.wireMap) chunk.wireMap.set(chunkData.wireMap);
-            }
-        }
-    },
-
-    // Get all loaded chunks (for saving/iteration)
-    getAllChunks() {
-        return this.chunks;
+        if (data && data.grid) this.grid.set(data.grid);
+        if (data && data.wireMap) this.wireMap.set(data.wireMap);
     }
 };
 
-// Make ChunkEngine globally available
 window.ChunkEngine = ChunkEngine;
-window.CHUNK_WIDTH = CHUNK_WIDTH;
 window.BEDROCK_DEPTH = BEDROCK_DEPTH;
