@@ -1,0 +1,4 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+@font-face {font-family:'Press Start 2P';src:url('/assets/fonts/pixel.woff2') format('woff2');font-weight:400;font-display:swap;}

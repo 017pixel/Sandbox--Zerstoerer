@@ -1,0 +1,4 @@
+User-agent: *
+Allow: /
+Disallow: /landing-page/demo
+Sitemap: https://sandbox-zerstoerer.vercel.app/sitemap.xml

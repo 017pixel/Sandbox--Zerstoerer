@@ -1,0 +1,25 @@
+<!doctype html>
+<html lang="de">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="robots" content="noindex">
+  <title>Sandbox-Zerstörer, kleine Spieldemo</title>
+  <style>
+    html,body{margin:0;width:100%;height:100%;overflow:hidden;background:#0f172a}
+    canvas{display:block;width:100%;height:100%;image-rendering:pixelated;touch-action:pan-y;cursor:crosshair}
+    .hidden,[hidden]{display:none}
+  </style>
+</head>
+<body>
+  <canvas id="world" aria-label="Pixelwelt. Mit einem Klick das gewählte Material platzieren." tabindex="0"></canvas>
+  <div hidden><span id="fps"></span><span id="entityCount"></span><div id="worldsPanel"></div></div>
+  <script src="/sb-chunk.js"></script>
+  <script src="/sb-data.js"></script>
+  <script src="/sb-utils.js"></script>
+  <script src="/sb-world.js"></script>
+  <script src="/sb-renderer.js"></script>
+  <script src="/sb-physics.js"></script>
+  <script src="/landing-page/demo.js"></script>
+</body>
+</html>
