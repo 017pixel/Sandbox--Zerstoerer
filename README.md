@@ -62,7 +62,7 @@ Die Landingpage verwendet eigenständiges CSS ohne Build-Abhängigkeiten.
 
 ## Version
 
-Aktuell: **1.2.0**. Änderungen stehen in [CHANGELOG.md](CHANGELOG.md).
+Aktuell: **1.2.1**. Änderungen stehen in [CHANGELOG.md](CHANGELOG.md).
 
 ## Lizenz
 

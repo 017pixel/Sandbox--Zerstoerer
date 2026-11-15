@@ -1600,7 +1600,7 @@ const WORLD_ATMOSPHERES = {
 const WORLD_VIEWS = {
     forest: { x: 240, y: 162 },
     village: { x: 240, y: 162 },
-    island: { x: 240, y: 160 },
+    island: { x: 200, y: 160 },
     volcano: { x: 240, y: 162 },
     cave: { x: 232, y: 166 },
     mine: { x: 240, y: 128 },

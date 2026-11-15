@@ -1,5 +1,10 @@
 # Changelog
 
+## [1.2.1] - 2026-11-15
+
+### Verändert
+- Insel-Kamera auf schmale Handybildschirme angepasst, damit Hütte und Palmen nicht mehr hinter dem Werkzeugmenü liegen.
+
 ## [1.2.0] - 2026-11-15
 
 ### Verändert
