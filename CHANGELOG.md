@@ -1,5 +1,21 @@
 # Changelog
 
+## [1.2.0] - 2026-11-15
+
+### Verändert
+- Alle acht Welten neu aufgebaut: größere Bauwerke, mehr Tiefe, mehr Details und eigene Himmelsstimmungen mit Sternen, Mond und Wolken.
+- Weltfläche von 320 × 180 auf 480 × 300 Pixel vergrößert.
+- Kamera rahmt jede Welt beim Laden passend; hochkant auf dem Handy füllt ein automatischer Zoom den Bildschirm.
+- Höhlen, Minen und Labyrinthe haben jetzt echten Untergrund statt Himmel in den Hohlräumen.
+- Gespeicherte Welten aus der alten Größe werden beim Laden automatisch übernommen und mittig unten einsortiert.
+- Landingpage-Demo an die neue Weltgröße und die neuen Szene-Bausteine angepasst und für alle Bildschirmgrößen ohne Beschnitt umgebaut; auf hohen Displays zeigt sie mehr Himmel.
+- Spielposter, Weltenbilder, Video und Video-Poster mit den neuen Welten neu erstellt.
+
+### Technisch
+- Himmel wird pro Szene vorberechnet, Physik überspringt statische Materialien; die größeren Welten bleiben flüssig.
+- Speicherformat um Weltgröße, Skyline und Himmelsstimmung ergänzt, alte Spielstände bleiben lesbar.
+- Offline-Cache auf Version 1.2.0 aktualisiert.
+
 ## [1.1.0] - 2026-10-28
 
 ### Erstellt

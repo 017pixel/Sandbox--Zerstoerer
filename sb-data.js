@@ -4,8 +4,8 @@ const fpsDisplay = document.getElementById('fps');
 const entDisplay = document.getElementById('entityCount');
 
 // --- CONFIG ---
-const WORLD_WIDTH = 320;
-const WORLD_HEIGHT = 180;
+const WORLD_WIDTH = 480;
+const WORLD_HEIGHT = 300;
 window.WORLD_WIDTH = WORLD_WIDTH;
 window.WORLD_HEIGHT = WORLD_HEIGHT;
 
@@ -52,8 +52,8 @@ colors[M.DETONATOR] = [180, 60, 60];
 colors[M.SENSOR] = [60, 80, 180];
 
 const dpr = Math.min(window.devicePixelRatio || 1, 2);
-const isTablet = window.innerWidth >= 768 && window.innerWidth <= 1366;
-const targetShort = isTablet ? 220 : 180;
+// Laptop/Tablet screens get a slightly denser simulation viewport.
+let targetShort = (window.innerWidth >= 768 && window.innerWidth <= 1366) ? 220 : 180;
 
 // Internal Simulation Size (Global) - viewport dimensions
 let width, height;
@@ -147,6 +147,23 @@ let allCurrentTools = [];
 let zoom = 1.0;
 let cameraX = 0;
 let cameraY = 0;
+
+// --- SCENE VIEW & SKY ---
+// viewFollow keeps the loaded scene framed while the window is resized.
+let viewFollow = true;
+let viewFocusX = WORLD_WIDTH / 2;
+let viewFocusY = WORLD_HEIGHT * 0.56;
+
+// Per-scene sky palette. Scenes override this in sb-world.js.
+const DEFAULT_ATMOSPHERE = {
+    skyTop: [13, 20, 38],
+    skyBottom: [23, 34, 60],
+    cloud: [122, 148, 180],
+    cloudAmount: 0.5,
+    stars: 0.5,
+    moon: null
+};
+let worldAtmosphere = DEFAULT_ATMOSPHERE;
 
 // --- FAST RNG OPTIMIZATION ---
 const RNG_SIZE = 8192;

@@ -201,6 +201,7 @@ async function saveCurrentWorld() {
 
     // Use ChunkEngine export
     const worldData = ChunkEngine.exportWorld();
+    worldData.atmosphere = worldAtmosphere;
     await dbStorage.saveWorld(id, name, worldData);
 
     // Update current session info so we know what we are working on
@@ -271,6 +272,28 @@ async function loadUserWorld(id) {
         resetWorld();
         // Use ChunkEngine import
         ChunkEngine.importWorld(w.data);
+        if (w.data.atmosphere && w.data.atmosphere.skyTop) {
+            worldAtmosphere = w.data.atmosphere;
+        }
+        skyMapDirty = true;
+
+        // Frame the saved content instead of guessing where it sits.
+        let minX = WORLD_WIDTH, maxX = -1, minY = WORLD_HEIGHT, maxY = -1;
+        const grid = ChunkEngine.grid;
+        for (let y = 0; y < WORLD_HEIGHT; y++) {
+            const row = y * WORLD_WIDTH;
+            for (let x = 0; x < WORLD_WIDTH; x++) {
+                const v = grid[row + x];
+                if (v === M.AIR || v === M.BEDROCK) continue;
+                if (x < minX) minX = x;
+                if (x > maxX) maxX = x;
+                if (y < minY) minY = y;
+                if (y > maxY) maxY = y;
+            }
+        }
+        if (maxX >= 0) frameWorld((minX + maxX) / 2, (minY + maxY) / 2);
+        else frameWorld(WORLD_WIDTH / 2, WORLD_HEIGHT * 0.5);
+
         toggleWorlds(); // Close panel
 
         // We set the ID/Name so the user knows what they loaded, 

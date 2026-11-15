@@ -8,6 +8,8 @@ Ein kleiner Pixel-Spielplatz im Browser. Sand rieselt, Wasser fließt, Holz bren
 
 Material auswählen und mit Maus oder Finger in die Welt malen. Über „Welten“ stehen acht Szenarien bereit, darunter Wald, Dorf, Insel und Vulkan. Im erweiterten Inventar findest du unter anderem Lava, TNT, Feuerwerk und elektrische Bauteile.
 
+Die Szenarien sind 480 × 300 Pixel groß und so angelegt, dass sie auf Handy, Tablet und Desktop den Bildschirm füllen. Beim Laden wird die Kamera auf den Mittelpunkt der jeweiligen Welt gesetzt; hochkant zoomt das Spiel automatisch so weit hinein, dass keine leeren Ränder bleiben.
+
 Mit dem Mausrad zoomst du, mit der rechten Maustaste verschiebst du die Ansicht. Auf dem Handy geht beides mit zwei Fingern. Eigene Welten und Einstellungen werden im jeweiligen Browser gespeichert. Nach dem ersten Laden funktioniert das Spiel auch offline.
 
 Spielstände gehören zur jeweiligen Internetadresse. Welten von der früheren GitHub-Pages-Adresse werden vom Browser nicht automatisch auf die neue Vercel-Adresse übertragen.
@@ -60,7 +62,7 @@ Die Landingpage verwendet eigenständiges CSS ohne Build-Abhängigkeiten.
 
 ## Version
 
-Aktuell: **1.1.0**. Änderungen stehen in [CHANGELOG.md](CHANGELOG.md).
+Aktuell: **1.2.0**. Änderungen stehen in [CHANGELOG.md](CHANGELOG.md).
 
 ## Lizenz
 

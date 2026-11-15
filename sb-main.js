@@ -103,10 +103,13 @@ canvas.addEventListener('wheel', e => {
     e.preventDefault();
     const rect = canvas.getBoundingClientRect();
     const cssX = e.clientX - rect.left;
+    const cssY = e.clientY - rect.top;
 
-    // Get world X at mouse position before zoom
+    // Get world point at mouse position before zoom
     const viewX = (cssX / rect.width) * width;
+    const viewY = (cssY / rect.height) * height;
     const worldXAtMouse = cameraX + (viewX / zoom);
+    const worldYAtMouse = cameraY + (viewY / zoom);
 
     // Adjust zoom
     const zoomFactor = e.deltaY > 0 ? 0.9 : 1.1;
@@ -115,11 +118,12 @@ canvas.addEventListener('wheel', e => {
     // Limit zoom: No zooming out further than 1.0
     zoom = Math.max(1.0, Math.min(zoom, 5.0));
 
-    // Adjust cameraX so the world point under mouse stays there
+    // Adjust camera so the world point under the mouse stays there
     if (zoom !== oldZoom) {
         cameraX = worldXAtMouse - (viewX / zoom);
-        const maxCamX = Math.max(0, WORLD_WIDTH - (width / zoom));
-        cameraX = Math.max(0, Math.min(cameraX, maxCamX));
+        cameraY = worldYAtMouse - (viewY / zoom);
+        clampCamera();
+        viewFollow = false;
     }
 }, { passive: false });
 
@@ -149,14 +153,8 @@ window.addEventListener('mousemove', e => {
 
         cameraX -= worldDeltaX;
         cameraY -= worldDeltaY;
-
-        // Clamp Camera X
-        const maxCamX = Math.max(0, WORLD_WIDTH - (width / zoom));
-        cameraX = Math.max(0, Math.min(cameraX, maxCamX));
-
-        // Clamp Camera Y
-        const maxCamY = Math.max(0, WORLD_HEIGHT - (height / zoom));
-        cameraY = Math.max(0, Math.min(cameraY, maxCamY));
+        clampCamera();
+        viewFollow = false;
 
         lastPanX = e.clientX;
         lastPanY = e.clientY;
@@ -186,7 +184,9 @@ function handleTouch(e) {
 
         const rect = canvas.getBoundingClientRect();
         const viewX = ((data.midX - rect.left) / rect.width) * width;
+        const viewY = ((data.midY - rect.top) / rect.height) * height;
         const worldXAtMid = cameraX + (viewX / zoom);
+        const worldYAtMid = cameraY + (viewY / zoom);
 
         if (lastPinchDist > 0) {
             // ZOOM
@@ -196,11 +196,10 @@ function handleTouch(e) {
             // Limit zoom: No zooming out further than 1.0
             zoom = Math.max(1.0, Math.min(zoom, 5.0));
 
-            // Adjust cameraX so focal point stays under fingers
+            // Adjust camera so focal point stays under fingers
             if (zoom !== oldZoom) {
                 cameraX = worldXAtMid - (viewX / zoom);
-                const maxCamX = Math.max(0, WORLD_WIDTH - (width / zoom));
-                cameraX = Math.max(0, Math.min(cameraX, maxCamX));
+                cameraY = worldYAtMid - (viewY / zoom);
             }
 
             // PAN (movement of midpoint)
@@ -211,11 +210,8 @@ function handleTouch(e) {
             cameraX -= worldPanDeltaX;
             cameraY -= worldPanDeltaY;
 
-            // Clamp Camera
-            const maxCamX2 = Math.max(0, WORLD_WIDTH - (width / zoom));
-            cameraX = Math.max(0, Math.min(cameraX, maxCamX2));
-            const maxCamY2 = Math.max(0, WORLD_HEIGHT - (height / zoom));
-            cameraY = Math.max(0, Math.min(cameraY, maxCamY2));
+            clampCamera();
+            viewFollow = false;
         }
 
         lastPinchDist = data.dist;

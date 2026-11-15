@@ -16,6 +16,7 @@ const ChunkEngine = {
     sparkColors: null,  // Uint32Array — spark RGB color
     wireMap: null,      // Uint8Array  — electricity signal (0-255)
     prevGrid: null,     // Int8Array   — grid snapshot for sensor change detection
+    skyline: null,      // Uint16Array — first underground row per column
 
     init(w, h) {
         this.worldWidth = w;
@@ -28,7 +29,9 @@ const ChunkEngine = {
         this.sparkColors = new Uint32Array(size);
         this.wireMap = new Uint8Array(size);
         this.prevGrid = new Int8Array(size);
+        this.skyline = new Uint16Array(w);
         this._generateBedrock();
+        this._resetSkyline();
         this.prevGrid.set(this.grid);
     },
 
@@ -39,6 +42,25 @@ const ChunkEngine = {
                 this.grid[idx] = M.BEDROCK;
             }
         }
+    },
+
+    _resetSkyline() {
+        this.skyline.fill(this.worldHeight - BEDROCK_DEPTH);
+    },
+
+    // --- Skyline (surface between open sky and cave air) ---
+    getSkyline(x) {
+        if (x < 0 || x >= this.worldWidth) return this.worldHeight - BEDROCK_DEPTH;
+        return this.skyline[x];
+    },
+
+    setSkyline(x, y) {
+        if (x < 0 || x >= this.worldWidth) return;
+        this.skyline[x] = Math.max(0, Math.min(this.worldHeight - BEDROCK_DEPTH, y | 0));
+    },
+
+    fillSkyline(y) {
+        this.skyline.fill(Math.max(0, Math.min(this.worldHeight - BEDROCK_DEPTH, y | 0)));
     },
 
     // Flat index helper
@@ -146,20 +168,107 @@ const ChunkEngine = {
         this.wireMap.fill(0);
         this.prevGrid.fill(0);
         this._generateBedrock();
+        this._resetSkyline();
         this.prevGrid.set(this.grid);
     },
 
     // --- Export / Import for saving ---
     exportWorld() {
         return {
+            width: this.worldWidth,
+            height: this.worldHeight,
             grid: new Int8Array(this.grid),
-            wireMap: new Uint8Array(this.wireMap)
+            wireMap: new Uint8Array(this.wireMap),
+            skyline: new Uint16Array(this.skyline)
         };
     },
 
     importWorld(data) {
-        if (data && data.grid) this.grid.set(data.grid);
-        if (data && data.wireMap) this.wireMap.set(data.wireMap);
+        if (!data || !data.grid) return false;
+
+        const srcW = data.width || 320;
+        const srcH = data.height || Math.round(data.grid.length / srcW);
+        if (!srcW || !srcH) return false;
+
+        const dstW = this.worldWidth;
+        const dstH = this.worldHeight;
+
+        this.heatMap.fill(0);
+        this.liquidDir.fill(0);
+        this.fireworkVel.fill(0);
+        this.sparkColors.fill(0);
+        this.wireMap.fill(0);
+
+        if (srcW === dstW && srcH === dstH) {
+            this.grid.set(data.grid);
+            if (data.wireMap && data.wireMap.length === dstW * dstH) this.wireMap.set(data.wireMap);
+            this._generateBedrock();
+            if (data.skyline && data.skyline.length === dstW) {
+                this.skyline.set(data.skyline);
+            } else {
+                this._deriveSkyline();
+            }
+        } else {
+            // Older saves are smaller (320x180). Keep them intact: center
+            // horizontally, anchor to the bottom so the ground stays grounded.
+            this.grid.fill(0);
+            this._generateBedrock();
+            const xOff = Math.floor((dstW - srcW) / 2);
+            const yOff = dstH - srcH;
+            const rowLen = Math.min(srcW, dstW);
+            for (let y = 0; y < srcH; y++) {
+                const ty = y + yOff;
+                if (ty < 0 || ty >= dstH) continue;
+                for (let x = 0; x < rowLen; x++) {
+                    const tx = x + xOff;
+                    if (tx < 0 || tx >= dstW) continue;
+                    const v = data.grid[y * srcW + x];
+                    if (v === M.AIR || v === M.BEDROCK) continue;
+                    this.grid[ty * dstW + tx] = v;
+                }
+            }
+            if (data.wireMap && data.wireMap.length === srcW * srcH) {
+                for (let y = 0; y < srcH; y++) {
+                    const ty = y + yOff;
+                    if (ty < 0 || ty >= dstH) continue;
+                    for (let x = 0; x < rowLen; x++) {
+                        const tx = x + xOff;
+                        if (tx < 0 || tx >= dstW) continue;
+                        const v = data.wireMap[y * srcW + x];
+                        if (v) this.wireMap[ty * dstW + tx] = v;
+                    }
+                }
+            }
+            this._deriveSkyline();
+        }
+
+        this.prevGrid.set(this.grid);
+        return true;
+    },
+
+    // Approximate the open-air/underground border from the grid. Used for
+    // saves from before the skyline existed and for unusual resolutions.
+    _deriveSkyline() {
+        const W = this.worldWidth;
+        const H = this.worldHeight;
+        const bottom = H - BEDROCK_DEPTH;
+        for (let x = 0; x < W; x++) {
+            let line = bottom;
+            for (let y = 0; y < bottom; y++) {
+                const v = this.grid[y * W + x];
+                if (v === M.AIR) continue;
+                // Ignore thin floating structures (tree crowns, roofs).
+                let support = 0;
+                for (let k = 1; k <= 12 && y + k < bottom; k++) {
+                    if (this.grid[(y + k) * W + x] !== M.AIR) support++;
+                }
+                if (support >= 7 || v === M.WATER) {
+                    line = y;
+                    break;
+                }
+            }
+            this.skyline[x] = line;
+        }
     }
 };
 

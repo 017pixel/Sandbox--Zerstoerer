@@ -7,6 +7,9 @@ function resize() {
     const screenW = window.innerWidth;
     const screenH = window.innerHeight;
 
+    // Phones and tablets change their class when rotated.
+    targetShort = (screenW >= 768 && screenW <= 1366) ? 220 : 180;
+
     // Update visual canvas
     canvas.width = screenW * dpr;
     canvas.height = screenH * dpr;
@@ -32,8 +35,53 @@ function resize() {
         imgData = offscreenCtx.createImageData(width, height);
         data = imgData.data;
     }
+
+    // Keep the current scene framed after rotation/window changes, unless the
+    // player has moved the camera themselves.
+    if (typeof frameWorld === 'function') {
+        if (viewFollow) frameWorld(viewFocusX, viewFocusY);
+        else clampCamera();
+    }
 }
 window.addEventListener('resize', resize);
+
+// --- CAMERA ---
+// Keeps the camera inside the world. If the viewport is larger than the
+// world (very wide screens), center the world instead of pinning its corner.
+function clampCamera() {
+    const viewW = width / zoom;
+    const viewH = height / zoom;
+    if (viewW >= WORLD_WIDTH) {
+        cameraX = (WORLD_WIDTH - viewW) / 2;
+    } else {
+        cameraX = Math.max(0, Math.min(cameraX, WORLD_WIDTH - viewW));
+    }
+    if (viewH >= WORLD_HEIGHT) {
+        cameraY = (WORLD_HEIGHT - viewH) / 2;
+    } else {
+        cameraY = Math.max(0, Math.min(cameraY, WORLD_HEIGHT - viewH));
+    }
+}
+
+// Frame a scene around its focal point. On tall phones the zoom grows until
+// the world fills the screen, so no empty band sits below the landscape.
+function frameWorld(fx = WORLD_WIDTH / 2, fy = WORLD_HEIGHT * 0.56) {
+    viewFocusX = Math.max(0, Math.min(WORLD_WIDTH, fx));
+    viewFocusY = Math.max(0, Math.min(WORLD_HEIGHT, fy));
+
+    const coverZoom = Math.max(
+        1,
+        height / WORLD_HEIGHT,
+        width / WORLD_WIDTH
+    );
+    zoom = Math.max(1, Math.min(coverZoom, 4));
+
+    cameraX = viewFocusX - (width / zoom) / 2;
+    cameraY = viewFocusY - (height / zoom) / 2;
+    clampCamera();
+    viewFollow = true;
+}
+
 resize();
 
 // --- HELPER ---
@@ -96,10 +144,13 @@ function getPos(e) {
 }
 
 // Reset world - clear all data and regenerate bedrock
-function resetWorld() {
+function resetWorld(recenterView = true) {
     ChunkEngine.clearWorld();
     meltdownActive = false;
     meltdownTimer = 0;
+    worldAtmosphere = DEFAULT_ATMOSPHERE;
+    skyMapDirty = true;
+    if (recenterView) frameWorld(WORLD_WIDTH / 2, WORLD_HEIGHT * 0.82);
     // Exit edit mode if function exists
     if (typeof exitEditMode === 'function') exitEditMode();
 }

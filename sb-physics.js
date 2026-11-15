@@ -6,6 +6,18 @@ let physicsFrameCount = 0;
 let cachedWarningEl = null;
 let cachedTimerEl = null;
 
+// Fast material filters: most of a landscape is stone, wood and air. These
+// tables let the two simulation passes skip everything that has no work to do
+// in that pass, which matters a lot now that worlds are 480x300.
+const upwardPassMaterial = new Uint8Array(64);
+[M.FIREWORK, M.STEAM, M.METHANE, M.LIGHTNING].forEach(m => { upwardPassMaterial[m] = 1; });
+
+const passiveInSecondPass = new Uint8Array(64);
+[
+    M.STONE, M.CONCRETE, M.BATTERY, M.WIRE, M.BOOSTER, M.LAMP,
+    M.REDSTONE_TORCH, M.SENSOR, M.STEAM, M.METHANE, M.LIGHTNING, M.FIREWORK
+].forEach(m => { passiveInSecondPass[m] = 1; });
+
 function updatePhysics() {
     let activeParticles = 0;
     globalTime += 0.1;
@@ -142,7 +154,7 @@ function updatePhysics() {
             const idx = y * W + x;
             const type = g[idx];
 
-            if (type === M.AIR || type === M.BEDROCK) continue;
+            if (type === M.AIR || type === M.BEDROCK || upwardPassMaterial[type] === 0) continue;
 
             if (type === M.FIREWORK) {
                 const fv = ChunkEngine.fireworkVel;
@@ -276,7 +288,7 @@ function updatePhysics() {
             const idx = y * W + x;
             const type = g[idx];
 
-            if (type === M.AIR || type === M.BEDROCK) continue;
+            if (type === M.AIR || type === M.BEDROCK || passiveInSecondPass[type]) continue;
             activeParticles++;
 
             if (type === M.FIRE) {
