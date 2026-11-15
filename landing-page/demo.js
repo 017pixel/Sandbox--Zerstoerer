@@ -1,10 +1,13 @@
 /* A small, isolated world running the game's original physics and renderer.
-   No storage, service worker or audio; it cannot overwrite a player's worlds. */
+   No storage, service worker or audio; it cannot overwrite a player's worlds.
+   The demo uses the same material strip and controls as the real game. */
 const AudioEngine = { play() {} };
 let paused = matchMedia('(prefers-reduced-motion: reduce)').matches;
 let visible = true;
-let selected = M.SAND;
 let lastTick = 0;
+let painting = false;
+let fpsFrames = 0;
+let fpsSince = 0;
 
 const demoAtmosphere = {
   skyTop: [9, 20, 34],
@@ -84,7 +87,7 @@ function seedDemo() {
   box(264, 220, 2, 15, M.WOOD);
   box(343, 220, 2, 15, M.WOOD);
 
-  // Cottage with a warm window and smoking chimney
+  // Cottage with a smoking chimney
   cottage(120, ChunkEngine.getSkyline(140), 46, 36, { roof: M.CONCRETE });
 
   // Trees and undergrowth frame the little scene
@@ -120,45 +123,101 @@ function seedDemo() {
   box(303, waterLine - 3, 3, 3, M.WOOD);
   box(316, waterLine - 3, 3, 3, M.WOOD);
 
+  tameVines();
   fitDemo();
+  renderTools();
+  setMaterial(currentMaterial);
 }
 
 function chanceDemo(p) {
   return srnd() < p;
 }
 
-function sprinkle(x, y) {
-  for (let dy = -4; dy <= 4; dy++) {
-    for (let dx = -4; dx <= 4; dx++) {
-      if (dx * dx + dy * dy > 16) continue;
-      const px = x + dx, py = y + dy;
-      if (py < 0 || py >= WORLD_HEIGHT || px < 0 || px >= WORLD_WIDTH) continue;
-      setPixel(px, py, selected);
-      if (selected === M.FIRE) ChunkEngine.setHeat(px, py, 255);
+// The same permanent material strip as the real game.
+function renderTools() {
+  const container = document.getElementById('tools-container');
+  if (!container) return;
+  container.innerHTML = '';
+  permanentTools.forEach(tool => {
+    const button = document.createElement('button');
+    button.type = 'button';
+    button.onclick = () => setMaterial(tool.id);
+    button.id = 'btn-' + tool.id;
+    button.className = `mat-btn w-28 h-8 ${tool.col} hover:brightness-110 border-r-4 ${tool.border} pointer-events-auto-child text-[8px] uppercase flex items-center pl-3 shadow-lg transition-transform hover:translate-x-2 relative`;
+    button.innerText = tool.name;
+    container.appendChild(button);
+  });
+  setMaterial(currentMaterial);
+}
+
+function setMaterial(id) {
+  const tool = permanentTools.find(t => t.id === id);
+  if (!tool) return;
+  currentMaterial = id;
+  const label = document.getElementById('currentMat');
+  if (label) label.innerText = tool.name;
+  document.querySelectorAll('#tools-container .mat-btn').forEach(button => {
+    button.classList.remove('translate-x-4', 'border-white');
+  });
+  const button = document.getElementById('btn-' + id);
+  if (button) button.classList.add('translate-x-4', 'border-white');
+}
+
+function paintAt(clientX, clientY) {
+  const rect = canvas.getBoundingClientRect();
+  if (!rect.width || !rect.height) return;
+  const wx = Math.floor(cameraX + ((clientX - rect.left) / rect.width) * width);
+  const wy = Math.floor(cameraY + ((clientY - rect.top) / rect.height) * height);
+  const radius = currentMaterial === M.AIR ? 3 : 2;
+
+  for (let dy = -radius; dy <= radius; dy++) {
+    for (let dx = -radius; dx <= radius; dx++) {
+      if (dx * dx + dy * dy > radius * radius + 1) continue;
+      const px = wx + dx;
+      const py = wy + dy;
+      if (px < 0 || px >= WORLD_WIDTH || py < 0 || py >= WORLD_HEIGHT) continue;
+      setPixel(px, py, currentMaterial);
+      if (currentMaterial === M.FIRE) ChunkEngine.setHeat(px, py, 255);
     }
   }
-  if (paused) { for (let n = 0; n < 12; n++) updatePhysics(); draw(); }
+  draw();
+  if (paused) {
+    for (let i = 0; i < 6; i++) updatePhysics();
+    draw();
+  }
+}
+
+function resetDemo() {
+  resetWorld(false);
+  worldAtmosphere = demoAtmosphere;
+  skyMapDirty = true;
+  fitDemo();
 }
 
 canvas.addEventListener('pointerdown', e => {
-  const rect = canvas.getBoundingClientRect();
-  const worldX = Math.floor(cameraX + ((e.clientX - rect.left) / rect.width) * width);
-  const worldY = Math.floor(cameraY + ((e.clientY - rect.top) / rect.height) * height);
-  sprinkle(worldX, worldY);
+  if (e.button !== undefined && e.button !== 0) return;
+  painting = true;
+  if (canvas.setPointerCapture && e.pointerId !== undefined) {
+    try { canvas.setPointerCapture(e.pointerId); } catch (error) { /* ignore */ }
+  }
+  paintAt(e.clientX, e.clientY);
 });
 
-canvas.addEventListener('keydown', e => {
-  if (e.key === 'Enter' || e.key === ' ') {
-    e.preventDefault();
-    sprinkle(240, 205);
-  }
+window.addEventListener('pointermove', e => {
+  if (painting) paintAt(e.clientX, e.clientY);
 });
+
+window.addEventListener('pointerup', () => { painting = false; });
+window.addEventListener('pointercancel', () => { painting = false; });
+window.addEventListener('blur', () => { painting = false; });
 
 window.addEventListener('message', e => {
   if (e.origin !== location.origin || e.source !== parent) return;
   const data = e.data;
   if (!data || data.source !== 'sandbox-landing') return;
-  if (data.action === 'material' && ['SAND', 'WATER', 'FIRE'].includes(data.material)) selected = M[data.material];
+  if (data.action === 'material' && ['SAND', 'WATER', 'FIRE'].includes(data.material)) {
+    setMaterial(M[data.material]);
+  }
   if (data.action === 'reset') seedDemo();
   if (data.action === 'pause') paused = !!data.paused;
   if (data.action === 'visibility') visible = !!data.visible;
@@ -170,6 +229,17 @@ function tick(time) {
     draw();
     lastTick = time;
   }
+
+  fpsFrames++;
+  if (!fpsSince) fpsSince = time;
+  if (time - fpsSince >= 500) {
+    const fps = Math.round(fpsFrames * 1000 / (time - fpsSince));
+    const fpsElement = document.getElementById('fps');
+    if (fpsElement) fpsElement.innerText = fps;
+    fpsFrames = 0;
+    fpsSince = time;
+  }
+
   requestAnimationFrame(tick);
 }
 

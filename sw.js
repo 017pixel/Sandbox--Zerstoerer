@@ -1,4 +1,4 @@
-const CACHE_NAME = 'sandbox-v1.2.1';
+const CACHE_NAME = 'sandbox-v1.2.2';
 const ASSETS = [
     './', './index.html', './sb-styles.css', './sb-chunk.js', './sb-data.js',
     './sb-utils.js', './sb-audio.js', './sb-storage.js', './sb-world.js',

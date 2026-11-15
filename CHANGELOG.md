@@ -1,5 +1,14 @@
 # Changelog
 
+## [1.2.2] - 2026-11-15
+
+### Verändert
+- Landingpage-Demo nutzt jetzt die echte Spiel-UI: Materialleiste links, LEEREN, FPS/ENT und Tool-Anzeige. Die separate Demo-Leiste mit Sand/Wasser/Feuer und Pause/Neustart ist entfernt.
+- Insel und Eissee werden von Fels- beziehungsweise Eisrändern eingefasst, damit kein Wasser am Weltrand herausläuft.
+- Fenster sind reine Glasflächen ohne Glut oder Feuer; keine Glut und keine Lava in Wasser; Methan liegt nicht neben Lava; TNT hat keine Hitzequellen direkt daneben.
+- Offene Moosranken werden beim Laden zu Blättern; Moos bleibt nur in geschlossenen Wand- und Baumflächen.
+- Insel- und Waldbilder, Demo-Poster und Galerie an die neue Weltlogik angepasst.
+
 ## [1.2.1] - 2026-11-15
 
 ### Verändert

@@ -106,29 +106,13 @@ function cavePocket(cx, cy, rx, ry) {
     ellipse(cx, cy, rx, ry, M.AIR, 0.5);
 }
 
-function leafBall(cx, cy, rx, ry, rough = 0.14, shade = 0.16) {
+function leafBall(cx, cy, rx, ry, rough = 0.14) {
     for (let y = -ry; y <= ry; y++) {
         for (let x = -rx; x <= rx; x++) {
             const d = (x * x) / (rx * rx) + (y * y) / (ry * ry);
             if (d > 1) continue;
             if (d > 0.72 && schance(rough)) continue;
             setPixel(cx + x, cy + y, M.LEAVES);
-        }
-    }
-    if (shade <= 0) return;
-    // Darker inner foliage for depth. Only fully enclosed pixels are recolored,
-    // so no vines ever grow out of the crown.
-    for (let y = -ry + 1; y < ry; y++) {
-        for (let x = -rx + 1; x < rx; x++) {
-            const px = cx + x, py = cy + y;
-            if (ChunkEngine.getV(px, py) !== M.LEAVES) continue;
-            if (schance(shade) &&
-                ChunkEngine.getV(px - 1, py) === M.LEAVES &&
-                ChunkEngine.getV(px + 1, py) === M.LEAVES &&
-                ChunkEngine.getV(px, py - 1) === M.LEAVES &&
-                ChunkEngine.getV(px, py + 1) === M.LEAVES) {
-                setPixel(px, py, M.VINE);
-            }
         }
     }
 }
@@ -277,13 +261,6 @@ function windowPane(x, y, w, h) {
     box(x, y, w, h, M.ICE);
     box(x, y + Math.floor(h / 2), w, 1, M.WOOD);
     box(x + Math.floor(w / 2), y, 1, h, M.WOOD);
-    // Warm candlelight in the middle of the pane
-    const cx = x + Math.floor(w / 2) - 1;
-    const cy = y + Math.floor(h / 2) - 1;
-    setPixel(cx, cy, M.REDSTONE_TORCH);
-    setPixel(cx + 1, cy, M.REDSTONE_TORCH);
-    setPixel(cx, cy + 1, M.REDSTONE_TORCH);
-    setPixel(cx + 1, cy + 1, M.REDSTONE_TORCH);
 }
 
 function cottage(x, groundY, width, wallHeight, options = {}) {
@@ -348,8 +325,6 @@ function church(x, groundY) {
         box(wx, top + 8, 7, 1, M.ICE);
         box(wx - 1, top + 9, 1, 15, M.WOOD);
         box(wx + 7, top + 9, 1, 15, M.WOOD);
-        setPixel(wx + 3, top + 15, M.REDSTONE_TORCH);
-        setPixel(wx + 3, top + 16, M.REDSTONE_TORCH);
     }
 
     // Nave roof
@@ -618,16 +593,14 @@ function worldVillage() {
     setPixel(201, 203, M.STONE);
     setPixel(199, 204, M.STONE);
 
-    // Cobblestones and small flowers along the road
-    for (let i = 0; i < 40; i++) {
-        const x = sint(150, 340);
-        const gy = ChunkEngine.getSkyline(x);
-        if (gy > 210 && gy < 225 && schance(0.5)) setPixel(x, gy, M.STONE);
-    }
+    // Small plants along the road
     for (let i = 0; i < 16; i++) {
         const x = sint(20, 460);
         const gy = ChunkEngine.getSkyline(x);
-        if (gy > 205) setPixel(x + sint(-1, 1), gy - 1, M.ICE);
+        if (gy > 205) {
+            setPixel(x + sint(-1, 1), gy - 1, M.LEAVES);
+            if (schance(0.4)) setPixel(x + sint(-1, 1), gy - 2, M.LEAVES);
+        }
     }
 
     // Cottages
@@ -685,8 +658,17 @@ function worldIsland() {
     const sea = 212;
     const seabed = 250;
 
-    // Ocean basin
+    const shoreLeft = 120;
+    const shoreRight = 360;
+
+    // Ocean basin with solid rock shores at both ends, so the water cannot
+    // visually spill out of the world box.
     for (let x = 0; x < WORLD_WIDTH; x++) {
+        if (x < shoreLeft || x >= shoreRight) {
+            const top = 196 + Math.round(Math.sin(x * 0.11) * 2);
+            groundColumn(x, top, { soil: 4, sub: 18, cap: M.LEAVES });
+            continue;
+        }
         for (let y = sea; y < seabed; y++) setPixel(x, y, M.WATER);
         for (let y = seabed; y < WORLD_HEIGHT - BEDROCK_DEPTH; y++) {
             setPixel(x, y, schance(0.03) ? M.COAL : M.STONE);
@@ -717,7 +699,7 @@ function worldIsland() {
         if (top < sea - 9) {
             setPixel(x, top, M.LEAVES);
             if (schance(0.35)) setPixel(x, top + 1, M.LEAVES);
-            if (schance(0.18)) setPixel(x + sint(-1, 1), top, M.VINE);
+            if (schance(0.18)) setPixel(x + sint(-1, 1), top, M.LEAVES);
         }
     }
 
@@ -734,7 +716,7 @@ function worldIsland() {
         ChunkEngine.setSkyline(x, hutBase);
     }
 
-    // Hut with a peaked thatch roof and a torch
+    // Hut with a peaked thatch roof
     box(171, hutBase - 26, 42, 26, M.WOOD);
     for (let d = 0; d < 11; d++) {
         const rw = 46 - d * 4;
@@ -743,9 +725,6 @@ function worldIsland() {
     box(184, hutBase - 16, 8, 16, M.AIR);
     box(176, hutBase - 21, 6, 6, M.ICE);
     box(200, hutBase - 21, 6, 6, M.ICE);
-    setPixel(178, hutBase - 19, M.REDSTONE_TORCH);
-    setPixel(202, hutBase - 19, M.REDSTONE_TORCH);
-    torch(196, hutBase - 24);
     box(190, hutBase - 2, 8, 2, M.SAND);
 
     // Rocks at the shoreline and on the plateau
@@ -770,7 +749,7 @@ function worldIsland() {
     for (let i = 0; i < 22; i++) {
         const bx = sint(150, 334);
         const by = ChunkEngine.getSkyline(bx);
-        if (by < sea - 4) setPixel(bx + sint(-2, 2), by, schance(0.5) ? M.LEAVES : M.VINE);
+        if (by < sea - 4) setPixel(bx + sint(-2, 2), by, M.LEAVES);
     }
 
     // Underground strata and small pockets make the cutaway interesting
@@ -787,42 +766,44 @@ function worldIsland() {
 
     // Shipwreck on the right beach
     const sy = 208;
-    line(334, sy - 10, 386, sy - 1, 4, M.WOOD);
-    line(334, sy - 10, 348, sy - 18, 3, M.WOOD);
-    line(362, sy - 4, 368, sy - 24, 2, M.WOOD);
-    box(338, sy - 7, 10, 5, M.WOOD);
-    for (let i = 0; i < 4; i++) setPixel(340 + i * 6, sy - 1, M.LEAVES);
-    box(374, sy - 5, 8, 4, M.WOOD);
+    line(300, sy - 10, 352, sy - 1, 4, M.WOOD);
+    line(300, sy - 10, 316, sy - 18, 3, M.WOOD);
+    line(332, sy - 4, 340, sy - 24, 2, M.WOOD);
+    box(304, sy - 7, 10, 5, M.WOOD);
+    for (let i = 0; i < 4; i++) setPixel(306 + i * 6, sy - 1, M.LEAVES);
+    box(342, sy - 5, 8, 4, M.WOOD);
 
     // A small bamboo pier on the left beach
     box(142, 205, 22, 2, M.WOOD);
     box(144, 207, 2, 7, M.WOOD);
     box(160, 207, 2, 7, M.WOOD);
 
-    // Coral and underwater life
+    // Coral and kelp only in the two water channels
     for (let i = 0; i < 16; i++) {
-        const cx = sint(50, 430);
+        const left = schance(0.5);
+        const cx = left ? sint(124, 136) : sint(344, 356);
         const cy = sint(226, 246);
-        const mat = schance(0.5) ? M.VINE : M.EMBER;
-        for (let j = 0; j < sint(3, 7); j++) setPixel(cx + sint(-2, 2), cy + sint(-2, 0), mat);
+        for (let j = 0; j < sint(3, 7); j++) {
+            setPixel(cx + sint(-2, 2), cy - sint(0, 2), M.LEAVES);
+        }
     }
     for (let i = 0; i < 10; i++) {
-        const kx = sint(50, 430);
+        const left = schance(0.5);
+        const kx = left ? sint(124, 136) : sint(344, 356);
         const ky = sint(228, 247);
         for (let j = 0; j < sint(2, 5); j++) setPixel(kx, ky - j, M.LEAVES);
     }
 
-    // Foam and shells at the waterline
-    for (let i = 0; i < 30; i++) {
-        const bx = sint(120, 360);
-        const by = ChunkEngine.getSkyline(bx);
-        if (by >= sea - 4 && by <= sea) setPixel(bx, by - 1, M.ICE);
-    }
+    // Shells and stones on the beach
     for (let i = 0; i < 14; i++) {
         const bx = sint(140, 340);
         const by = ChunkEngine.getSkyline(bx);
-        if (by > sea - 10 && by < sea) setPixel(bx, by - 1, schance(0.5) ? M.STONE : M.COAL);
+        if (by > sea - 10 && by < sea) setPixel(bx, by - 1, schance(0.5) ? M.SAND : M.STONE);
     }
+
+    // Small plants on the containing cliffs
+    bush(24, ChunkEngine.getSkyline(24), 0.6);
+    bush(456, ChunkEngine.getSkyline(456), 0.6);
 }
 
 function worldVolcano() {
@@ -1231,7 +1212,7 @@ function worldMine() {
     for (let i = 0; i < 12; i++) setPixel(sint(68, 112), 265 + sint(-2, 1), M.EMBER);
 
     // Methane pockets and termite damage
-    for (let i = 0; i < 10; i++) setPixel(sint(60, 430), sint(120, 270), M.METHANE);
+    for (let i = 0; i < 10; i++) setPixel(sint(60, 430), sint(120, 220), M.METHANE);
     for (let i = 0; i < 14; i++) {
         const x = sint(50, 430);
         const y = sint(120, 270);
@@ -1250,8 +1231,15 @@ function worldIce() {
     seedScene(9707);
     const lake = 222;
 
-    // Frozen lake and stone shores
+    // Frozen lake with solid banks at both ends, so the water stays in the box
+    const iceShore = 26;
     for (let x = 0; x < WORLD_WIDTH; x++) {
+        if (x < iceShore || x >= WORLD_WIDTH - iceShore) {
+            for (let y = lake - 8; y < lake; y++) setPixel(x, y, M.ICE);
+            for (let y = lake; y < WORLD_HEIGHT - BEDROCK_DEPTH; y++) setPixel(x, y, M.STONE);
+            ChunkEngine.setSkyline(x, lake - 8);
+            continue;
+        }
         for (let y = 226; y < 254; y++) setPixel(x, y, M.WATER);
         for (let y = lake; y < 226; y++) setPixel(x, y, M.ICE);
         for (let y = 254; y < WORLD_HEIGHT - BEDROCK_DEPTH; y++) setPixel(x, y, M.STONE);
@@ -1260,7 +1248,7 @@ function worldIce() {
 
     // Cracked ice and darker water holes
     for (let i = 0; i < 30; i++) {
-        const x = sint(20, 460);
+        const x = sint(34, 446);
         const y = lake + sint(1, 4);
         setPixel(x, y, M.WATER);
         if (schance(0.5)) setPixel(x + 1, y, M.WATER);
@@ -1316,16 +1304,12 @@ function worldIce() {
         ChunkEngine.setSkyline(x, keepBase - 28);
     }
 
-    // Tall windows with glowing ice panes
+    // Tall windows with ice panes
     for (let i = 0; i < 3; i++) {
         const wx = keepX + 12 + i * 22;
         box(wx, keepTop + 6, 9, 18, M.CONCRETE);
         box(wx + 1, keepTop + 7, 7, 16, M.ICE);
         box(wx + 4, keepTop + 7, 1, 16, M.CONCRETE);
-        setPixel(wx + 3, keepTop + 13, M.REDSTONE_TORCH);
-        setPixel(wx + 3, keepTop + 14, M.REDSTONE_TORCH);
-        setPixel(wx + 4, keepTop + 13, M.REDSTONE_TORCH);
-        setPixel(wx + 4, keepTop + 14, M.REDSTONE_TORCH);
     }
 
     // Central tower rising behind the keep
@@ -1442,13 +1426,18 @@ function worldIce() {
         for (let j = 0; j < 6; j++) setPixel(fx + sint(-4, 4), keepBase - 4 - j, M.ICE);
     }
 
-    // Warm braziers at the gate and torches at the bridge
-    box(208, keepBase - 36, 9, 5, M.STONE);
-    torchCluster(212, keepBase - 40);
-    box(256, keepBase - 36, 9, 5, M.STONE);
-    torchCluster(260, keepBase - 40);
-    torchCluster(194, keepBase - 12);
-    torchCluster(282, keepBase - 12);
+    // Ice crystal pedestals at the gate (no fire inside an ice palace)
+    for (const px of [208, 256]) {
+        box(px, keepBase - 36, 9, 5, M.STONE);
+        for (let j = 0; j < 10; j++) {
+            const w = Math.max(1, Math.round((1 - j / 10) * 5));
+            box(px + 4 - (w >> 1), keepBase - 41 - j, w, 1, M.ICE);
+        }
+    }
+    for (let j = 0; j < 6; j++) {
+        setPixel(197, keepBase - 12 - j, M.ICE);
+        setPixel(285, keepBase - 12 - j, M.ICE);
+    }
 }
 
 function worldLabyrinth() {
@@ -1600,7 +1589,7 @@ const WORLD_ATMOSPHERES = {
 const WORLD_VIEWS = {
     forest: { x: 240, y: 162 },
     village: { x: 240, y: 162 },
-    island: { x: 200, y: 160 },
+    island: { x: 238, mediumX: 200, narrowX: 225, y: 160 },
     volcano: { x: 240, y: 162 },
     cave: { x: 232, y: 166 },
     mine: { x: 240, y: 128 },
@@ -1618,6 +1607,24 @@ const WORLD_BUILDERS = {
     ice: worldIce,
     labyrinth: worldLabyrinth
 };
+
+// Generated moss may only sit in fully enclosed spots. Any vine that touches
+// open air would start spreading across the scene, so turn those into leaves.
+function tameVines() {
+    const W = ChunkEngine.worldWidth;
+    const H = ChunkEngine.worldHeight;
+    const g = ChunkEngine.grid;
+    for (let y = 0; y < H; y++) {
+        for (let x = 0; x < W; x++) {
+            const idx = y * W + x;
+            if (g[idx] !== M.VINE) continue;
+            if (ChunkEngine.getV(x - 1, y) === M.AIR || ChunkEngine.getV(x + 1, y) === M.AIR ||
+                ChunkEngine.getV(x, y - 1) === M.AIR || ChunkEngine.getV(x, y + 1) === M.AIR) {
+                g[idx] = M.LEAVES;
+            }
+        }
+    }
+}
 
 function setWorldAtmosphere(type) {
     worldAtmosphere = WORLD_ATMOSPHERES[type] || DEFAULT_ATMOSPHERE;
@@ -1640,8 +1647,12 @@ function loadWorld(type) {
     document.getElementById('worldsPanel').classList.add('hidden');
 
     builder();
+    tameVines();
     setWorldAtmosphere(type);
 
     const view = WORLD_VIEWS[type] || { x: WORLD_WIDTH / 2, y: WORLD_HEIGHT * 0.56 };
-    frameWorld(view.x, view.y);
+    let focusX = view.x;
+    if (view.mediumX !== undefined && width < 240) focusX = view.mediumX;
+    if (view.narrowX !== undefined && width < 200) focusX = view.narrowX;
+    frameWorld(focusX, view.y);
 }
