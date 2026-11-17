@@ -1,5 +1,11 @@
 # Gestaltung und Prüfung
 
+Aktueller Stand: Die Demo nutzt die echte Spiel-UI mit Materialleiste links,
+LEEREN, FPS/ENT und Tool-Anzeige. Die frühere separate Demo-Leiste mit
+Sand/Wasser/Feuer und Pause/Neustart ist entfernt. Bei reduzierter Bewegung
+startet die Demo pausiert. Die Abschnitte ROUND 1 und ROUND 2 unten sind
+historische Zwischenstände.
+
 Richtung: „Dressed as something else“, Seed 425820481 aus design-taste-frontend.
 Die Materialien und das kleine Häuschen von Sandbox-Zerstörer werden zum Inhalt einer spielbaren Spielzeugschachtel. Die dunkle Grundfarbe, gelbe Aktionen und Pixelschrift stammen aus dem bestehenden Spiel. Die ruhige Leseschrift ergänzt die Pixelschrift bei längeren Texten.
 
@@ -24,7 +30,7 @@ Top three problems (most visible first), each with the screenshot it shows in an
 ROUND 2
 Seen in one second: Pixelspiel zum direkten Ausprobieren, klare gelbe Spielaktion.
 Idea (one sentence): Das Spielhäuschen wird zum ersten Experiment einer spielbaren Spielzeugschachtel.
-Live thing: echte Spieldemo mit Materialwechsel, Pause und Reset; alternativ per Tastatur.
+Live thing: echte Spieldemo mit Materialwechsel und Reset; bei reduzierter Bewegung pausiert.
 Layout words by section: hero=große Schrift über Welt / intro=freie Erklärung / showcase=Spielvideo und Welten / cta=kurzer Abschluss
 Scores: design 8 · usability 8 · creativity 8 · content 8 → overall 8.0
 Caps applied: keine.

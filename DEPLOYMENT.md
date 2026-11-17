@@ -1,43 +1,126 @@
-# Umzug zu Vercel
+# Deployment
 
-Stand: 28. Oktober 2026, Version 1.1.0.
+Stand: 15. November 2026.
 
-## Ergebnis
+## Produktion
 
-- Spiel: https://sandbox-zerstoerer.vercel.app/
-- Landingpage: https://sandbox-zerstoerer.vercel.app/landing-page
-- Projekt: https://vercel.com/benjamin-s-projects-77ef4d8a/sandbox-zerstoerer
-- Repository: https://github.com/017pixel/Sandbox--Zerstoerer
+| Punkt | Wert |
+|---|---|
+| Spiel | <https://sandbox-zerstoerer.vercel.app/> |
+| Landingpage | <https://sandbox-zerstoerer.vercel.app/landing-page> |
+| Vercel-Projekt | `sandbox-zerstoerer` im Hobby-Team |
+| Repository | <https://github.com/017pixel/Sandbox--Zerstoerer> |
+| Produktionsbranch | `main` |
+| Framework | statisch, kein Framework |
 
-Das neue Projekt liegt im bestehenden Vercel-Hobby-Team. Der Tarif wurde über die Vercel-API als `hobby` bestätigt. Es wurden keine kostenpflichtigen Erweiterungen, Serverfunktionen oder Datenbanken eingerichtet. Die kostenlosen Tarifgrenzen von Vercel gelten weiterhin.
+Es gibt keine Serverfunktionen, keine Datenbank, keine Umgebungsvariablen und
+keine kostenpflichtigen Zusatzdienste. Vercel liefert ausschließlich statische
+Dateien aus `dist/` aus. Spielstände bleiben im Browser der Nutzer.
 
-Das Produktionsdeployment `dpl_Av45KAhbDQQ6UXZ2EzRt2xTw6PDF` wurde von Vercel als `Ready` bestätigt. Beide Seiten sind öffentlich ohne Vercel-Anmeldung erreichbar. Das Projekt ist mit dem bestehenden GitHub-Repository und dem Produktionsbranch `main` verbunden.
+## Build
 
-GitHub bestätigt `has_pages: false`. Der alte Pages-Workflow ist `disabled_manually`; seine Datei wurde lokal entfernt. Die Repository-Homepage zeigt auf die neue Spieladresse.
+`vercel.json` legt fest:
 
-## Landingpage
+- Build: `node scripts/build.mjs`
+- Output: `dist/`
+- Clean URLs: an
+- Trailing Slash: aus
+- `/sw.js`: `Cache-Control: no-cache`
+- Alle Antworten: `X-Content-Type-Options: nosniff` und
+  `Referrer-Policy: strict-origin-when-cross-origin`
 
-Dunkle Spielpalette, gelbe Aktionen und Pixelschrift. Eine kleine Welt reagiert auf Sand, Wasser und Feuer mit der originalen Spielphysik. Dazu kommen drei echte Szenario-Screenshots, eine kurze echte Spielaufnahme mit TNT und Links zum Spiel und zu GitHub. Alle Medien und Schriften werden lokal ausgeliefert.
+`scripts/build.mjs` löscht `dist/` und kopiert nur die Produktionsdateien:
 
-Die Demo speichert nichts und verändert keine Welten des eigentlichen Spiels. Bei reduzierter Bewegung startet sie pausiert. Materialien lassen sich per Tastatur wählen; mit Enter oder Leertaste im Demo-Canvas wird Material gesetzt.
+- `index.html`, `sb-*.js`, `sb-*.css`, `sw.js`, `manifest.json`,
+  `pwa-icon.png`, `robots.txt`, `sitemap.xml`
+- `assets/` vollständig
+- `landing-page/` mit `.html`, `.css`, `.js` und `assets/`
 
-Die Designrichtung und die eigene gestalterische Einschätzung sind in [landing-page/DESIGN.md](landing-page/DESIGN.md) dokumentiert.
+Doku, Tests, Skripte, `temp/`, `.dev/` und `.opencode/` landen nicht in `dist/`.
+`npm run check:dist` prüft genau das.
 
-## Prüfung
+## Deployment auslösen
 
-Lokal und anschließend mit einem frischen Browserkontext auf der öffentlichen Vercel-Adresse bestanden:
+Ein Push auf `main` löst automatisch ein Produktionsdeployment aus. Zusätzlich
+läuft `.github/workflows/verify.yml`:
 
-- Layout und Bilder bei 320, 390, 768 und 1440 Pixeln, ohne horizontalen Überlauf.
-- Materialwechsel, Pause, Zeichnen, Reset und Tastatureingabe in der Demo.
-- Videowiedergabe, interne Spiellinks und GitHub-Linkziele.
-- Mobiler Spielbutton beim Scrollen und pausierter Start bei reduzierter Bewegung.
-- Szenario laden, Material auswählen, zeichnen, Welt speichern, neu laden und Offlinebetrieb im eigentlichen Spiel.
-- Keine unbehandelten JavaScript-Ausnahmen oder HTTP-Fehler während dieser Abläufe.
+- Pull Request KLEIN: `check:quick` plus Browser-Smoke.
+- Pull Request GROSS: `check` mit voller E2E-Suite.
+- Push auf `main`: immer GROSS.
+- `Gate` bleibt grün, wenn E2E bewusst übersprungen wurde.
 
-Die Designwerkzeuge melden für die finale Seite bei 390, 768 und 1440 Pixeln `0 FAIL, 0 WARN`. Die bestehende Pixelschrift wurde dabei ausdrücklich als Markenbestandteil zugelassen. Die Screenshots aller geprüften Ansichten wurden angesehen. Der statische Build enthält weder Entwicklernotizen noch die Design-Dokumentation.
+Ablauf:
 
-## Zu beachten
+```bash
+npm run release:scope   # KLEIN oder GROSS
+npm run release -- --type patch --points "fixed:Kurzer Punkt"
+npm run check           # Release-Gate, immer vollständig
+git push origin main
+```
 
-Browser-Spielstände sind an ihre bisherige Internetadresse gebunden. Die Datenstruktur wurde nicht geändert; eine automatische Übertragung alter GitHub-Pages-Spielstände auf die Vercel-Adresse ist durch die Trennung der Browser-Speicher nicht möglich.
+Optionaler manueller Deploy:
 
-Die erste Veröffentlichung erfolgte direkt per Vercel CLI. Die Übernahme des geprüften Standes als Version 1.1.0 auf GitHub und der Push auf `main` wurden vom Nutzer freigegeben. Künftige Pushes auf `main` lösen über die GitHub-Verbindung ein Produktionsdeployment aus.
+```bash
+vercel deploy --prod --scope benjamin-s-projects-77ef4d8a
+```
+
+Der manuelle Deploy ist nur für Notfälle oder Vercel-Probleme gedacht. Der
+normale Weg ist der Push auf `main`.
+
+## Produktion prüfen
+
+```bash
+curl -fsS "https://sandbox-zerstoerer.vercel.app/?v=$(date +%s)" \
+  | grep -o 'application-version" content="[^"]*"'
+curl -fsS https://sandbox-zerstoerer.vercel.app/sw.js | head -1
+curl -fsSI https://sandbox-zerstoerer.vercel.app/landing-page | head -1
+```
+
+Erwartet:
+
+- neue Version in der Meta,
+- `const CACHE_NAME = 'sandbox-vX.Y.Z';`,
+- HTTP 200 für die Landingpage.
+
+Danach mit Playwright die Produktion öffnen, Einstellungen öffnen und die
+Version prüfen. Erst dann gilt der Release als ausgeliefert.
+
+Vercel braucht meist unter einer Minute. Bleibt die alte Version länger live,
+das Deployment im Dashboard prüfen und den Fehler melden. Nicht „live“
+behaupten.
+
+## Rollback
+
+1. Im Vercel-Dashboard das letzte gesunde Produktionsdeployment promoten oder
+   den fehlerhaften Commit mit `git revert` umkehren und pushen.
+2. Produktion erneut prüfen.
+3. Prüfen, ob der alte Stand die vorhandenen IndexedDB-Daten lesen kann.
+4. Korrektur als neuen Patch ausliefern.
+
+Nach einem Speicherformat-Wechsel ist ein Rollback gefährlich, wenn der alte
+Code die neuen Daten nicht versteht. Dann vorwärts reparieren.
+
+Niemals IndexedDB leeren oder den Nutzer bitten, Website-Daten zu löschen. Es
+gibt keinen Export und kein Backup.
+
+## Lokal und Produktion
+
+| Punkt | Lokal | Produktion |
+|---|---|---|
+| Server | `npm start` auf Port 8080+ | Vercel |
+| Dateien | Projektordner direkt | `dist/` |
+| Service Worker | `no-cache`, Cache `sandbox-vX.Y.Z` | dito |
+| Landingpage | `/landing-page` | `/landing-page` |
+| Datenbank | IndexedDB im Browser | IndexedDB im Browser |
+
+Der lokale Dev-Server bildet Clean URLs, die Landingpage-Route, MIME-Typen,
+Range-Requests für das Video und `no-cache` für `sw.js` nach. Er liefert aber
+nur die erlaubten Spieldateien, nicht die Doku oder Tests.
+
+## Hintergrund
+
+Das Projekt lag früher auf GitHub Pages. Mit Version 1.1.0 wurde es auf Vercel
+umgestellt. Der alte Pages-Workflow ist deaktiviert. Spielstände aus der alten
+Adresse werden vom Browser nicht automatisch übertragen.
+
+Aktuelle Release-Regeln: [docs/RELEASING.md](docs/RELEASING.md).
