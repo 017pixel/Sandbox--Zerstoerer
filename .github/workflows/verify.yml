@@ -1,0 +1,119 @@
+name: Verify
+
+on:
+  pull_request:
+  push:
+    branches: [main]
+
+permissions:
+  contents: read
+
+concurrency:
+  group: verify-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  scope:
+    name: Diff klassifizieren
+    runs-on: ubuntu-latest
+    outputs:
+      scope: ${{ steps.scope.outputs.scope }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+
+      - name: Basis-Branch holen
+        if: github.event_name == 'pull_request'
+        run: git fetch origin ${{ github.base_ref }} --depth=1
+
+      - name: Scope bestimmen
+        id: scope
+        env:
+          BASE_REF: ${{ github.event_name == 'pull_request' && format('origin/{0}', github.base_ref) || '' }}
+        run: |
+          if [ "${{ github.event_name }}" = "push" ]; then
+            node scripts/release-scope.mjs --force gross --github-output
+          else
+            node scripts/release-scope.mjs --base "$BASE_REF" --github-output
+          fi
+
+  quick:
+    name: Schnellprüfung
+    needs: scope
+    if: needs.scope.outputs.scope == 'KLEIN'
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+
+      - name: Basis-Branch holen
+        run: git fetch origin ${{ github.base_ref }} --depth=1
+
+      - run: npm ci
+      - run: npx playwright install --with-deps chromium
+
+      - name: Betroffene Tests
+        env:
+          BASE_REF: origin/${{ github.base_ref }}
+        run: npm run check:quick
+
+      - name: Browser-Smoke
+        run: npm run test:smoke
+
+  full:
+    name: Volle Prüfung
+    needs: scope
+    if: needs.scope.outputs.scope == 'GROSS'
+    runs-on: ubuntu-latest
+    timeout-minutes: 25
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+
+      - run: npm ci
+      - run: npx playwright install --with-deps chromium
+
+      - name: Vollständiges Gate
+        run: npm run check
+
+  gate:
+    name: Gate
+    if: always()
+    needs: [scope, quick, full]
+    runs-on: ubuntu-latest
+    steps:
+      - name: Ergebnis prüfen
+        run: |
+          echo "scope=${{ needs.scope.result }} quick=${{ needs.quick.result }} full=${{ needs.full.result }}"
+          if [ "${{ needs.scope.result }}" != "success" ]; then
+            exit 1
+          fi
+          if [ "${{ needs.quick.result }}" = "failure" ] || [ "${{ needs.quick.result }}" = "cancelled" ]; then
+            exit 1
+          fi
+          if [ "${{ needs.full.result }}" = "failure" ] || [ "${{ needs.full.result }}" = "cancelled" ]; then
+            exit 1
+          fi
+          if [ "${{ needs.scope.outputs.scope }}" = "KLEIN" ] && [ "${{ needs.quick.result }}" != "success" ]; then
+            exit 1
+          fi
+          if [ "${{ needs.scope.outputs.scope }}" = "GROSS" ] && [ "${{ needs.full.result }}" != "success" ]; then
+            exit 1
+          fi
