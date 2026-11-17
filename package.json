@@ -1,0 +1,29 @@
+{
+  "name": "sandbox-zerstoerer",
+  "private": true,
+  "description": "Pixel-Sandbox im Browser mit Physik, acht Welten und Offlinebetrieb.",
+  "engines": {
+    "node": ">=20"
+  },
+  "scripts": {
+    "start": "node scripts/dev.mjs start",
+    "stop": "node scripts/dev.mjs stop",
+    "status": "node scripts/dev.mjs status",
+    "restart": "node scripts/dev.mjs restart",
+    "build": "node scripts/build.mjs",
+    "release:scope": "node scripts/release-scope.mjs",
+    "test:changed": "node scripts/test-changed.mjs",
+    "test:smoke": "playwright test --grep @smoke",
+    "test:e2e": "playwright test",
+    "test:landing": "playwright test tests/landing.spec.mjs",
+    "test:e2e:ui": "playwright test --ui",
+    "check:source": "node scripts/check.mjs",
+    "check:quick": "node scripts/check-quick.mjs",
+    "check:dist": "node scripts/check.mjs --dist",
+    "check": "npm run build && npm run check:dist && npm run test:e2e",
+    "release": "node .opencode/skills/app-update/scripts/release.mjs"
+  },
+  "devDependencies": {
+    "@playwright/test": "1.65.1"
+  }
+}

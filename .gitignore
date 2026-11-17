@@ -3,5 +3,9 @@ dist/
 node_modules/
 .taste-skill/
 temp/
+.dev/
+test-results/
+playwright-report/
+blob-report/
 .env
 .env.*
