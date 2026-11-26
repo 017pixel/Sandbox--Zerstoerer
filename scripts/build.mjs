@@ -3,7 +3,7 @@ import { cp, mkdir, readdir, rm } from 'node:fs/promises';
 await rm('dist', { recursive: true, force: true });
 await mkdir('dist');
 for (const file of await readdir('.')) {
-  if (/^(index\.html|sb-[\w-]+\.(js|css)|sw\.js|manifest\.json|pwa-icon\.png|robots\.txt|sitemap\.xml)$/.test(file)) {
+  if (/^(index\.html|sb-[\w-]+\.(js|css)|sw\.js|version\.json|manifest\.json|pwa-icon\.png|robots\.txt|sitemap\.xml)$/.test(file)) {
     await cp(file, `dist/${file}`);
   }
 }

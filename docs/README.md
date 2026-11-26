@@ -22,6 +22,6 @@ und nicht bindend. Für aktuelle Arbeit immer die Doku oben verwenden.
 - [verbesserungsmoeglichkeiten.md](archive/verbesserungsmoeglichkeiten.md)
 
 Der Release-Workflow für Agenten liegt unter
-[.opencode/skills/app-update/SKILL.md](../.opencode/skills/app-update/SKILL.md).
+[.agents/skills/update/SKILL.md](../.agents/skills/update/SKILL.md).
 Der CI-Gate liegt in
 [.github/workflows/verify.yml](../.github/workflows/verify.yml).

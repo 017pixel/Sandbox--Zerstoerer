@@ -23,8 +23,9 @@ Die zwei Oberflächen teilen sich denselben Code, aber nicht denselben Zustand:
   Cloud-Sync, kein Autosave.
 - **Vorab erzeugtes Tailwind-CSS.** Kein CSS-Build bei jedem Deployment. Neue
   Utility-Klassen werden bewusst neu erzeugt.
-- **Kein Update-Popup.** Die neue Fassung kommt beim nächsten vollständigen
-  Laden. Der Service Worker cached versioniert.
+- **Optionaler Update-Hinweis.** Standardmäßig kommt die neue Fassung still
+  beim nächsten vollständigen Laden. `sb-update.js` kann einmal ein Popup mit
+  drei Hinweisen zeigen. Der Service Worker cached versioniert.
 - **Landingpage getrennt.** Sie hat eigene Styles und eine Demo ohne
   Speicherzugriff. Sie wird nicht vom Service Worker gecacht.
 
@@ -79,7 +80,7 @@ Demo hat keinen Zugriff auf gespeicherte Welten.
 | `scripts/build.mjs` | Löscht `dist/` und kopiert nur die Produktions-Whitelist. |
 | `scripts/check.mjs` | Prüft Version, Cache, Doku-Links, Tests, Manifest, Syntax und optional `dist/`. |
 | `tests/` | Playwright-Smoke und E2E. |
-| `.opencode/skills/app-update/` | Release-Workflow und Versions-Script. |
+| `.agents/skills/update/` | Release-Workflow und Versions-Script. |
 
 ## Laufzeitfluss
 

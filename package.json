@@ -21,7 +21,7 @@
     "check:quick": "node scripts/check-quick.mjs",
     "check:dist": "node scripts/check.mjs --dist",
     "check": "npm run build && npm run check:dist && npm run test:e2e",
-    "release": "node .opencode/skills/app-update/scripts/release.mjs"
+    "release": "node .agents/skills/update/scripts/release.mjs"
   },
   "devDependencies": {
     "@playwright/test": "1.65.1"

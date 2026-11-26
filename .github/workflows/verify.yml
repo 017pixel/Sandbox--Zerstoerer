@@ -35,12 +35,12 @@ jobs:
       - name: Scope bestimmen
         id: scope
         env:
-          BASE_REF: ${{ github.event_name == 'pull_request' && format('origin/{0}', github.base_ref) || '' }}
+          BASE_REF: ${{ github.event_name == 'pull_request' && format('origin/{0}', github.base_ref) || github.event.before }}
         run: |
-          if [ "${{ github.event_name }}" = "push" ]; then
-            node scripts/release-scope.mjs --force gross --github-output
-          else
+          if [ -n "$BASE_REF" ] && git cat-file -e "${BASE_REF}^{commit}" 2>/dev/null; then
             node scripts/release-scope.mjs --base "$BASE_REF" --github-output
+          else
+            node scripts/release-scope.mjs --github-output
           fi
 
   quick:

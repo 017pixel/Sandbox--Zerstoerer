@@ -180,6 +180,20 @@ else if (version && readmeVersion[1] !== version) {
   fail(`README.md: Version "${readmeVersion[1]}" passt nicht zu "${version}"`);
 }
 
+const release = readJson(join(root, 'version.json'), 'version.json');
+if (version && release.version !== version) {
+  fail(`version.json: Version "${release.version}" passt nicht zu "${version}"`);
+}
+if (release.mode !== 'silent' && release.mode !== 'announced') {
+  fail(`version.json: mode muss silent oder announced sein, ist "${release.mode}"`);
+}
+if (!Array.isArray(release.notes)) fail('version.json: notes muss ein Array sein');
+else if (release.mode === 'announced' && release.notes.length !== 3) {
+  fail(`version.json: announced braucht genau drei notes, hat ${release.notes.length}`);
+} else if (release.mode === 'silent' && release.notes.length !== 0) {
+  fail('version.json: silent darf keine notes haben');
+}
+
 const changelogTop = changelog.match(
   /^# Changelog[ \t]*\r?\n+## \[(\d+\.\d+\.\d+)\] - (\d{4}-\d{2}-\d{2})$/m,
 );
@@ -260,9 +274,9 @@ const requiredFiles = [
   'scripts/test-changed.mjs',
   'scripts/check-quick.mjs',
   '.github/workflows/verify.yml',
-  '.opencode/skills/app-update/SKILL.md',
-  '.opencode/skills/app-update/references/data-safety.md',
-  '.opencode/skills/app-update/scripts/release.mjs',
+  '.agents/skills/update/SKILL.md',
+  '.agents/skills/update/references/data-safety.md',
+  '.agents/skills/update/scripts/release.mjs',
 ];
 for (const file of requiredFiles) {
   if (!existsSync(join(root, file))) fail(`Pflichtdatei fehlt: ${file}`);
@@ -290,8 +304,8 @@ for (const file of [
   'docs/ARCHITECTURE.md',
   'docs/TESTING.md',
   'docs/RELEASING.md',
-  '.opencode/skills/app-update/SKILL.md',
-  '.opencode/skills/app-update/references/data-safety.md',
+  '.agents/skills/update/SKILL.md',
+  '.agents/skills/update/references/data-safety.md',
 ]) {
   const path = join(root, file);
   if (existsSync(path)) checkMarkdownLinks(path);
@@ -322,7 +336,7 @@ const scriptFiles = existsSync(join(root, 'scripts'))
 checkNodeSyntax([
   ...scriptFiles,
   'playwright.config.mjs',
-  '.opencode/skills/app-update/scripts/release.mjs',
+  '.agents/skills/update/scripts/release.mjs',
   ...testFiles,
 ].map((file) => join(root, file)));
 

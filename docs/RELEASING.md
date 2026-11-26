@@ -3,22 +3,23 @@
 ## Grundsatz
 
 Ein Release ist erst fertig, wenn Version, Changelog, Build und Produktion
-zusammenpassen. Für den Ablauf ist der Skill `app-update` zuständig. Diese
-Seite beschreibt die Regeln dahinter.
+zusammenpassen. Für den Ablauf ist der Skill `update` zuständig. Diese Seite
+beschreibt die Regeln dahinter.
 
 ## Version
 
-Die App-Version steht an fünf Stellen:
+Die App-Version steht an sechs Stellen:
 
 | Datei | Stelle |
 |---|---|
+| `version.json` | `version`, `mode`, `notes` |
 | `index.html` | `<meta name="application-version" content="X.Y.Z">` |
 | `index.html` | `<span>vX.Y.Z</span>` im Einstellungsfenster |
 | `sw.js` | `const CACHE_NAME = 'sandbox-vX.Y.Z';` |
 | `CHANGELOG.md` | oberster Block `## [X.Y.Z] - YYYY-MM-DD` |
 | `README.md` | `Aktuell: **X.Y.Z**` |
 
-Das Release-Script schreibt alle fünf Stellen. Nicht von Hand nachziehen.
+Das Release-Script schreibt alle sechs Stellen. Nicht von Hand nachziehen.
 
 | Änderung | Stufe |
 |---|---|
@@ -49,8 +50,9 @@ npm run release:scope -- --base origin/main
 | `KLEIN` | keine Datenpfade, keine echte Engine-Änderung, höchstens fünf produktive Dateien | `npm run check:quick` plus Smoke |
 | `GROSS` | Datenpfad, Engine, Service Worker, Update-Flow, Abhängigkeiten, Deployment-Build, übergreifender Umbau | `npm run check` |
 
-Ein Release oder Produktionsupdate läuft **immer** über `npm run check`, auch
-bei KLEIN. Der kurze Loop gilt für die Entwicklung, nicht für die Auslieferung.
+Ein Release folgt derselben Stufe. KLEIN läuft über `check:source`,
+`test:smoke` und `build`. GROSS läuft über `npm run check`, einmal. Die
+Versions-Metadaten allein lösen keinen vollen Browserlauf aus.
 
 Warum vor dem Bump? Das Release-Script ändert `sw.js`. Danach wäre der Diff
 allein durch die Versionierung ein Daten-/Update-Pfad und würde immer GROSS
@@ -60,8 +62,17 @@ melden. Der Scope soll die eigentliche Codeänderung bewerten.
 
 ```bash
 npm run release -- \
-  --type patch \
+  --type patch --silent \
   --points "fixed:Wasser läuft nicht mehr aus dem Weltrand|technical:Offline-Cache erneuert"
+```
+
+Popup:
+
+```bash
+npm run release -- \
+  --type minor --announced \
+  --points "new:Erster Punkt|improved:Zweiter Punkt" \
+  --notes "Erster Hinweis|Zweiter Hinweis|Dritter Hinweis"
 ```
 
 Punkt-Typen: `new`, `improved`, `fixed`, `removed`, `technical`.
@@ -72,6 +83,9 @@ Weitere Schalter:
 
 | Schalter | Wirkung |
 |---|---|
+| `--silent` | Stilles Update ohne Popup (Standard). |
+| `--announced` | Popup mit genau drei Hinweisen. |
+| `--notes "A\|B\|C"` | Drei Hinweise für das Popup. |
 | `--dry-run` | Zeigt Version und Changelog-Block, schreibt nichts. |
 | `--date YYYY-MM-DD` | Setzt das Release-Datum. Standard ist heute. |
 
@@ -79,6 +93,16 @@ Das Script bricht ab, wenn eine Versionsstelle fehlt, doppelt vorkommt oder
 die neue Version schon im Changelog steht. Fehler beheben, nicht umgehen.
 
 ## Prüfung
+
+KLEIN:
+
+```bash
+npm run check:source
+npm run test:smoke
+npm run build
+```
+
+GROSS:
 
 ```bash
 npm run check
@@ -91,7 +115,7 @@ Das ist das vollständige Gate:
 - `check:dist`: Build-Version, Cache, Assets, Landingpage, keine Doku/Tests.
 - `test:e2e`: alle Browser-Tests.
 
-`check:quick` ist der kurze Entwicklungs-Loop und **nicht** das Release-Gate:
+`check:quick` ist der kurze Entwicklungs-Loop:
 
 ```bash
 npm run check:quick
@@ -121,8 +145,8 @@ Danach erneut `npm run check`.
 
 ## Commit und Push
 
-- Release-Commit enthält Version, `index.html`, `sw.js`, `README.md` und
-  `CHANGELOG.md` zusammen mit den eigentlichen Änderungen.
+- Release-Commit enthält Version, `version.json`, `index.html`, `sw.js`,
+  `README.md` und `CHANGELOG.md` zusammen mit den eigentlichen Änderungen.
 - Weitere Commits nach Thema: `feat:`, `fix:`, `perf:`, `refactor:`, `docs:`,
   `chore:`.
 - Nur beabsichtigte Dateien stagen. Kein `dist/`, `temp/`, `.dev/`, `.vercel/`,
@@ -138,7 +162,7 @@ Danach erneut `npm run check`.
 
 - KLEIN: `check:quick` plus Browser-Smoke.
 - GROSS: `check` mit voller E2E-Suite.
-- Push auf `main`: immer GROSS.
+- Push auf `main`: Scope gegen den vorherigen Commit, nicht pauschal GROSS.
 - Der Job `Gate` bleibt grün, wenn E2E bewusst übersprungen wurde.
 
 `Gate` ist der verpflichtende Branch-Protection-Check.
@@ -171,10 +195,11 @@ das Deployment prüfen und den Fehler melden. Nicht „live“ behaupten.
 
 ## Update-Verhalten
 
-Es gibt kein Popup und kein Update-Gate. Die neue Fassung wird beim nächsten
-vollständigen Laden aktiv. Offene Tabs behalten ihr geladenes JavaScript, bis
-sie neu laden. Der Service Worker tauscht den Cache über den neuen
-`CACHE_NAME`.
+Standardmäßig gibt es kein Popup und kein Update-Gate. Die neue Fassung wird
+beim nächsten vollständigen Laden aktiv. Mit `--announced` zeigt
+`sb-update.js` nach dem Versionswechsel einmal drei Hinweise. Offene Tabs
+behalten ihr geladenes JavaScript, bis sie neu laden. Der Service Worker
+tauscht den Cache über den neuen `CACHE_NAME`.
 
 ## Rollback
 

@@ -81,7 +81,8 @@ Vor dem Commit:
 - `/landing-page` wird vollständig ausgenommen.
 - Ein neuer Worker ruft `skipWaiting()` und `clients.claim()` auf. Offene Tabs
   behalten ihr JavaScript, bis sie vollständig neu laden.
-- Kein Update-Gate, kein Popup, kein `SKIP_WAITING`-Ausbau.
+- Kein Update-Gate und kein `SKIP_WAITING`-Ausbau. Ein optionales Popup über
+  `sb-update.js` ist erlaubt und standardmäßig aus.
 
 ## Was nie passiert
 

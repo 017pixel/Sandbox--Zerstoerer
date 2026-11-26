@@ -36,7 +36,7 @@ Engine-Änderung. Sobald Code, Verhalten oder Daten betroffen sind, ist es
 GROSS.
 
 KLEIN prüft `npm run check:quick`. GROSS prüft `npm run check`. Ein Release
-läuft immer über `npm run check`, auch bei KLEIN.
+folgt derselben Stufe: KLEIN `check:source` + Smoke + Build, GROSS `check`.
 
 ## Befehle
 
@@ -161,7 +161,7 @@ Diese Entscheidungen sind Absicht, nicht Lücke:
 - Version, Cache, Manifest, Assets und Doku-Links prüft `scripts/check.mjs`.
   Dafür gibt es keinen zweiten Playwright-Test.
 - `release:scope` und `test:changed` teilen sich `scripts/diff-map.mjs`.
-- Der frühere doppelte Check im `app-update`-Skill ist entfernt.
+- Der frühere doppelte Check im `update`-Skill ist entfernt.
 
 ## Testregeln
 

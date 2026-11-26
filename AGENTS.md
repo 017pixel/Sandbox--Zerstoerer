@@ -89,9 +89,9 @@ einmal manuell ausführen.
 
 ### Release
 
-Ein Release oder Produktionsupdate ist immer ein volles Gate, unabhängig von
-der Diff-Größe. Der kurze KLEIN-Loop gilt für die Entwicklung, nicht für die
-Auslieferung. Details: [docs/RELEASING.md](docs/RELEASING.md).
+Ein Release folgt derselben Prüftiefe wie die Änderung. KLEIN nutzt
+`check:source`, `test:smoke` und `build`; GROSS nutzt das volle Gate, einmal.
+Details: [docs/RELEASING.md](docs/RELEASING.md).
 
 ## Arbeitsweise für Agenten
 
@@ -114,7 +114,7 @@ Nutzer sie ausdrücklich erlaubt oder ein Skill sie vorschreibt.
 
 - KLEIN: `check:quick` plus Browser-Smoke.
 - GROSS: `check` mit voller E2E-Suite.
-- Push auf `main`: immer GROSS, also volles Gate.
+- Push auf `main`: Scope gegen den vorherigen Commit, nicht pauschal GROSS.
 - Der gemeinsame Job `Gate` bleibt grün, wenn die E2E-Suite bewusst
   übersprungen wurde.
 
@@ -170,8 +170,8 @@ des Nutzers. Es gibt keinen Export, kein Backup und keine Cloud.
   alte Fassung unter Umständen offline hängen.
 - **Landingpage bleibt aus dem Service-Worker-Cache ausgenommen.**
 - **`vercel.json` behält `Cache-Control: no-cache` für `/sw.js`.**
-- **Kein Update-Gate, kein Popup und kein Artwork erfinden.** Die App hat
-  bewusst keins.
+- **Kein Update-Gate und kein Artwork erfinden.** Ein kurzes optionales
+  Update-Popup über `sb-update.js` ist erlaubt; standardmäßig bleibt es still.
 
 ## Code-Regeln
 
@@ -232,18 +232,19 @@ Details, Testzuordnung und bewusste Lücken: [docs/TESTING.md](docs/TESTING.md).
 
 ## Release
 
-Für jedes App-Release den Skill `app-update` verwenden. Er entscheidet über
-Version, Changelog und Prüfumfang.
+Für jedes App-Release den Skill `update` unter
+`.agents/skills/update/SKILL.md` verwenden. Er entscheidet über Version,
+Changelog, stilles Update oder Popup und Prüfumfang.
 
 1. `npm run release:scope` **vor** dem Versions-Bump.
-2. KLEIN im Entwicklungs-Loop: `npm run check:quick` plus Smoke.
+2. KLEIN: `npm run check:quick` plus Smoke.
 3. GROSS: `npm run check`.
-4. `npm run release -- --type ... --points ...`
-5. Release/Update: immer `npm run check` mit voller E2E-Suite.
+4. `npm run release -- --type ... --points ... --silent` oder `--announced`.
+5. KLEIN-Release: `check:source`, `test:smoke`, `build`. GROSS: `npm run check`.
 6. Commit und Push.
 
-- Version, `index.html`, `sw.js`, `README.md` und `CHANGELOG.md` gehören in
-  denselben Release-Commit.
+- Version, `version.json`, `index.html`, `sw.js`, `README.md` und `CHANGELOG.md`
+  gehören in denselben Release-Commit.
 - Kein `dist/`, `temp/`, `.dev/`, `.vercel/`, `node_modules/` committen.
 - Kein Force-Push, keine Hooks umgehen.
 - Vercel deployed bei einem Push auf `main`. Danach die Produktionsversion
@@ -280,7 +281,8 @@ auf vorhandene Dateien zeigen. Doku-Änderungen also immer mit
 - [ ] `npm run release:scope` wurde ausgeführt.
 - [ ] KLEIN: `npm run check:quick` ist grün.
 - [ ] GROSS: `npm run check` ist grün.
-- [ ] Release: volles `npm run check` ist grün.
+- [ ] Release: passende Stufe grün (KLEIN `check:source` + Smoke + Build,
+      GROSS `npm run check`).
 - [ ] Neue oder geänderte Datenpfade sind getestet oder ausdrücklich als
       ungetestet gemeldet.
 - [ ] `CHANGELOG.md` und Version sind nur bei einem App-Release geändert.

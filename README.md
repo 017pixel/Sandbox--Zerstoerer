@@ -136,7 +136,7 @@ Vercel-Adresse übertragen.
 | `scripts/` | Dev-Server, Build, Diff-Scope, Testauswahl und Prüfung. |
 | `tests/` | Playwright-Smoke und E2E. |
 | `docs/` | Architektur, Teststrategie, Release und Archiv. |
-| `.opencode/skills/app-update/` | Release-Workflow für Agenten. |
+| `.agents/skills/update/` | Release-Workflow für Agenten. |
 
 Die App nutzt klassische JavaScript-Dateien ohne Bundler. Die Ladereihenfolge
 in `index.html` ist Teil der Architektur. Schriften, Bilder und Video werden
@@ -152,8 +152,8 @@ jeweiligen Browseradresse.
 
 Der Service Worker cached die Spieldateien unter `sandbox-vX.Y.Z`. Die
 Landingpage bleibt vom Cache ausgenommen. Nach einem Update wird die neue
-Fassung beim nächsten vollständigen Laden aktiv. Es gibt bewusst kein
-Update-Popup.
+Fassung beim nächsten vollständigen Laden aktiv. Standardmäßig gibt es kein
+Popup; mit `"mode": "announced"` zeigt `sb-update.js` einmal drei Hinweise.
 
 Im lokalen Dev-Betrieb erzeugt der Dev-Server einen eigenen Cache-Namen aus den
 Spieldateien. Dadurch erscheinen Änderungen sofort, ohne den Browser-Cache von

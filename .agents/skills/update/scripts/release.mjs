@@ -2,18 +2,22 @@
 /**
  * Release für Sandbox-Zerstörer vorbereiten.
  *
- * Schreibt die neue Version in alle vier Quellen und legt den
- * CHANGELOG-Block oben an. Es gibt kein Artwork, kein Popup und keine
- * Admin-Version.
+ * Schreibt die neue Version in alle Quellen und legt den CHANGELOG-Block
+ * oben an. Ein optionales Popup wird über --announced und --notes gesetzt.
+ * Es gibt kein Artwork und keine Admin-Version.
  *
  * Aufruf:
- *   node .opencode/skills/app-update/scripts/release.mjs \
+ *   node .agents/skills/update/scripts/release.mjs \
  *     --type patch \
- *     --points "fixed:Erster Punkt|improved:Zweiter Punkt"
+ *     --points "fixed:Erster Punkt|improved:Zweiter Punkt" \
+ *     --silent
  *
  * Optionen:
  *   --type patch|minor|major   Versionsstufe (Pflicht)
  *   --points "typ:Text|..."    mindestens ein Punkt (Pflicht)
+ *   --silent                   stilles Update ohne Popup (Standard)
+ *   --announced                Popup mit genau drei Hinweisen
+ *   --notes "A|B|C"            drei Hinweise für das Popup
  *   --date YYYY-MM-DD          Release-Datum, Standard ist heute
  *   --dry-run                  nur anzeigen, nichts schreiben
  *
@@ -51,9 +55,11 @@ function parseOptions(argv) {
   for (let index = 0; index < argv.length; index += 1) {
     const flag = argv[index];
     const name = flag.split('=')[0];
-    if (name === '--dry-run') {
-      if (flag.includes('=')) fail('Option --dry-run erwartet keinen Wert.');
-      options.dryRun = true;
+    if (name === '--dry-run' || name === '--silent' || name === '--announced') {
+      if (flag.includes('=')) fail(`Option ${name} erwartet keinen Wert.`);
+      if (name === '--dry-run') options.dryRun = true;
+      if (name === '--silent') options.silent = true;
+      if (name === '--announced') options.announced = true;
       continue;
     }
     const value = flag.includes('=') ? flag.slice(flag.indexOf('=') + 1) : argv[++index];
@@ -64,6 +70,9 @@ function parseOptions(argv) {
         break;
       case '--points':
         options.points = value.split('|').map((part) => part.trim()).filter(Boolean);
+        break;
+      case '--notes':
+        options.notes = value.split('|').map((part) => part.trim()).filter(Boolean);
         break;
       case '--date':
         options.date = value;
@@ -151,11 +160,32 @@ if (!['patch', 'minor', 'major'].includes(options.type)) {
 const points = parsePoints(options.points);
 const date = validateDate(options.date || todayLocal());
 
+if (options.silent && options.announced) {
+  fail('Nutze entweder --silent oder --announced, nicht beides.');
+}
+const mode = options.announced ? 'announced' : 'silent';
+const notes = options.notes ?? [];
+if (mode === 'announced' && notes.length !== 3) {
+  fail('--announced braucht genau drei Hinweise: --notes "A|B|C".');
+}
+if (mode === 'silent' && notes.length > 0) {
+  fail('--silent darf keine Hinweise haben.');
+}
+for (const note of notes) {
+  if (note.length < 3 || note.length > 140) {
+    fail(`Hinweis "${note}" muss zwischen 3 und 140 Zeichen lang sein.`);
+  }
+  if (/\p{Extended_Pictographic}/u.test(note)) {
+    fail(`Hinweis "${note}" enthält ein Emoji.`);
+  }
+}
+
 const paths = {
   index: join(root, 'index.html'),
   sw: join(root, 'sw.js'),
   changelog: join(root, 'CHANGELOG.md'),
   readme: join(root, 'README.md'),
+  versionJson: join(root, 'version.json'),
 };
 for (const [label, path] of Object.entries(paths)) {
   if (!existsSync(path)) fail(`${label} fehlt: ${path}`);
@@ -245,6 +275,8 @@ writeFileSync(paths.index, index);
 writeFileSync(paths.sw, sw);
 writeFileSync(paths.readme, readme);
 writeFileSync(paths.changelog, changelog);
+writeFileSync(paths.versionJson, `${JSON.stringify({ version: nextVersion, mode, notes }, null, 2)}\n`);
 
-console.log('release: index.html, sw.js, README.md und CHANGELOG.md aktualisiert');
+console.log(`release: Update-Art ${mode}${mode === 'announced' ? ` mit ${notes.length} Hinweisen` : ''}`);
+console.log('release: index.html, sw.js, README.md, CHANGELOG.md und version.json aktualisiert');
 console.log('release: als Nächstes check.mjs, Build und Spielstand-Test laufen lassen');
