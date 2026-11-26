@@ -43,6 +43,8 @@ IndexedDB gehört zum Browserprofil und wird vom Server nicht angefasst.
 
 ## Diff-Größe: KLEIN oder GROSS
 
+Die Skripte stufen den Diff in XS, S, M, L und XL ein. KLEIN/GROSS ist nur das zweistufige CI-Gate: XS/S/M = KLEIN, L/XL = GROSS.
+
 Vor der Arbeit und vor dem Commit den Diff klassifizieren:
 
 ```bash

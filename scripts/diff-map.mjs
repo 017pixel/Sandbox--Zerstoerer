@@ -257,8 +257,19 @@ export function classifyDiff(files, options = {}) {
     reasons.add(`mehr als fünf produktive Dateien (${productionFiles.length})`);
   }
 
+  const critical = [...reasons].some((reason) => /Engine|Daten|Update|Service-Worker|PWA|Spielmodul|Spiel und Landingpage|mehr als|erzwungen/.test(reason));
+  const size = critical || productionFiles.length > 15
+    ? 'XL'
+    : productionFiles.length === 0
+      ? 'XS'
+      : productionFiles.length <= 2
+        ? 'S'
+        : productionFiles.length <= 5
+          ? 'M'
+          : 'L';
   return {
     scope: reasons.size > 0 ? 'GROSS' : 'KLEIN',
+    size,
     reasons: [...reasons],
     files,
     productionFiles,

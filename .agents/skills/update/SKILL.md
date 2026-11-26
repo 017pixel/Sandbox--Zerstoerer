@@ -68,10 +68,16 @@ von `CHANGELOG.md` und die Versionszeile in `README.md`.
 
 `npm run release:scope` entscheidet, nicht das Bauchgefühl.
 
-| Klasse | Definition | Entwicklung | Release |
+| Größe | Definition | Entwicklung | Release |
 |---|---|---|---|
-| KLEIN | höchstens 5 produktive Dateien, kein Datenpfad, keine Engine-Änderung | `npm run check:quick` + `npm run test:smoke` | `npm run check:source` + `npm run test:smoke` + `npm run build` |
-| GROSS | `sb-storage.js`, `sb-chunk.js`, `sw.js`, Engine, Update-Flow, Dependencies, mehr als 5 produktive Dateien | `npm run check` | `npm run check`, einmal |
+| XS | nur Doku, Werkzeug oder Release-Metadaten, 0 produktive Dateien | keine App-Tests | `npm run build` |
+| S | 1–2 produktive Dateien, isoliert | `npm run check:quick` + `npm run test:smoke` | `npm run check:source` + Smoke + Build |
+| M | 3–5 produktive Dateien, ein Bereich | `npm run check:quick` + `npm run test:smoke` + betroffenes Spec | `npm run check:source` + betroffenes Spec + Build |
+| L | 6–15 produktive Dateien oder zwei Bereiche | `npm run check` | `npm run check`, einmal |
+| XL | `sb-storage.js`, `sb-chunk.js`, `sw.js`, Engine, Update-Flow, Dependencies oder mehr als 15 Dateien | `npm run check` | `npm run check` + Spielstand-Test, einmal |
+
+Der CI-Gate bleibt zweistufig: XS, S und M laufen als KLEIN, L und XL als
+GROSS.
 
 Scope **vor** dem Versions-Bump bestimmen. Danach ist `sw.js` durch die
 Versionierung formal ein Datenpfad; die vorher bestimmte Stufe gilt.
@@ -84,7 +90,7 @@ Gezielte Tests:
 | Kernlogik, Speichern, Welten | `npm run test:changed` |
 | Offline, Service Worker | `npx playwright test tests/offline.spec.mjs` |
 | Landingpage | `npm run test:landing` |
-| Unklar oder GROSS | `npm run check` |
+| Unklar, L oder XL | `npm run check` |
 
 Lokal maximal 2 Playwright-Worker (`PW_WORKERS=2`). Keine Nutzer-Ports
 übernehmen.
@@ -110,7 +116,7 @@ Mit `--dry-run` vorher prüfen.
 
 ## 4. Prüfen und ausliefern (5 Minuten)
 
-KLEIN:
+XS/S/M:
 
 ```bash
 npm run check:source
@@ -118,7 +124,7 @@ npm run test:smoke
 npm run build
 ```
 
-GROSS:
+L/XL:
 
 ```bash
 npm run check
@@ -170,7 +176,7 @@ Hinweisen. Danach die Produktionsseite einmal mit dem T3-Code-Browser öffnen.
 - Der Service Worker löscht nur `sandbox-*`-Caches, niemals IndexedDB.
 - `version.json` gehört nicht in den Service-Worker-Cache.
 - Änderungen an `sb-storage.js`, `sb-chunk.js`, `sw.js` oder am Update-Flow
-  sind immer GROSS.
+  sind immer XL.
 - Vor einem Update mit Speicheränderung eine Welt speichern, neu laden und
   prüfen, dass sie erhalten bleibt.
 
@@ -192,10 +198,23 @@ Zahlung oder Spending Limit nicht, ist das ein Infrastrukturblocker: einmal
 feststellen, im Bericht nennen, nicht retryen. Vercel deployed unabhängig
 davon; lokale Prüfung und Produktionsprüfung bleiben der Nachweis.
 
+## Mehrere PRs mergen
+
+- PRs einzeln und in Abhängigkeitsreihenfolge mergen, nicht alle gleichzeitig.
+- Vor jedem Merge `gh pr view <n> --json mergeable,statusCheckRollup,headRefName,baseRefName` prüfen.
+- Konflikte logisch lösen: beide Absichten verstehen, betroffene Dateien lesen,
+  keine pauschalen `--ours`- oder `--theirs`-Übernahmen.
+- Nach jedem Merge `git pull --ff-only`, betroffene Tests erneut laufen lassen
+  und erst dann den nächsten PR mergen.
+- Bei widersprüchlichen Änderungen stoppen und die Entscheidung dokumentieren;
+  keine stillen Überschreibungen.
+- Am Ende die kombinierte Änderung als Ganzes prüfen, nicht nur jeden PR
+  einzeln.
+
 ## 8. Abschlussbericht
 
-Kurz: Version, Datum, still oder Popup, drei Hinweise (nur Popup), KLEIN/GROSS,
-Testergebnis, Commit, Produktionsstatus mit URL, offene Blocker.
+Kurz: Version, Datum, still oder Popup, drei Hinweise (nur Popup), Größe
+(XS–XL), Testergebnis, Commit, Produktionsstatus mit URL, offene Blocker.
 
 ## Verbote
 
@@ -203,7 +222,7 @@ Testergebnis, Commit, Produktionsstatus mit URL, offene Blocker.
   `README.md` und `CHANGELOG.md`.
 - Kein Popup ohne genau drei Hinweise.
 - Keine Nutzerdaten löschen oder zurücksetzen.
-- Kein voller E2E-Lauf bei KLEIN, außer der Diff ist GROSS.
+- Kein voller E2E-Lauf bei XS, S oder M, außer der Diff ist L oder XL.
 - Kein Force-Push, keine Secrets, keine übersprungenen Hooks.
 - Keine Produktionsversion behaupten, die live noch nicht erreichbar ist.
 

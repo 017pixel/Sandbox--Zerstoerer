@@ -46,6 +46,7 @@ const result = force === 'gross'
   ? {
     ...classified,
     scope: 'GROSS',
+    size: 'XL',
     reasons: ['erzwungen: gross', ...classified.reasons],
   }
   : classified;
@@ -53,13 +54,15 @@ const result = force === 'gross'
 if (asJson) {
   console.log(JSON.stringify({
     scope: result.scope,
+    size: result.size,
     reasons: result.reasons,
     productionFiles: result.productionFiles,
     tests: result.tests,
     files: result.files,
   }, null, 2));
 } else {
-  console.log(`Scope: ${result.scope}`);
+  console.log(`Größe: ${result.size}`);
+  console.log(`CI-Gate: ${result.scope}`);
   console.log(`Produktive Dateien: ${result.productionFiles.length}`);
   if (result.reasons.length > 0) {
     console.log('Gründe:');
