@@ -67,7 +67,7 @@ jobs:
 
       - name: Betroffene Tests
         env:
-          BASE_REF: origin/${{ github.base_ref }}
+          BASE_REF: ${{ github.event_name == 'pull_request' && format('origin/{0}', github.base_ref) || github.event.before }}
         run: npm run check:quick
 
       - name: Browser-Smoke
