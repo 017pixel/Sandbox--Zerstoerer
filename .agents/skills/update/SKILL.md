@@ -185,6 +185,13 @@ git pull --ff-only
 
 Danach normal updaten.
 
+## CI
+
+Höchstens 3 Minuten auf den Start warten. Startet der Lauf wegen Billing,
+Zahlung oder Spending Limit nicht, ist das ein Infrastrukturblocker: einmal
+feststellen, im Bericht nennen, nicht retryen. Vercel deployed unabhängig
+davon; lokale Prüfung und Produktionsprüfung bleiben der Nachweis.
+
 ## 8. Abschlussbericht
 
 Kurz: Version, Datum, still oder Popup, drei Hinweise (nur Popup), KLEIN/GROSS,
